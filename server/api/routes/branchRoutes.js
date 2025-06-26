@@ -1,5 +1,5 @@
 // File: routes/branchRoutes.js
-// NEW FILE: Defines API endpoints for managing branches.
+// Defines API endpoints for managing branches.
 
 import express from "express";
 import { protect, admin } from "../middleware/authMiddleware.js";

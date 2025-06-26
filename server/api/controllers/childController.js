@@ -1,5 +1,5 @@
 // File: controllers/childController.js
-// NEW FILE: Contains logic for managing a member's children.
+// Contains logic for managing a member's children.
 
 import { getDB } from "../../config/db.js";
 

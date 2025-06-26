@@ -1,5 +1,5 @@
 // File: controllers/branchController.js
-// NEW FILE: Contains logic for branch CRUD operations.
+// Contains logic for branch CRUD operations.
 
 import { getDB } from "../../config/db.js";
 

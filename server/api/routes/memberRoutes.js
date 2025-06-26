@@ -1,5 +1,5 @@
 // File: routes/memberRoutes.js
-// NEW FILE: Defines API endpoints for managing members.
+// Defines API endpoints for managing members.
 
 import express from "express";
 import { protect } from "../middleware/authMiddleware.js";

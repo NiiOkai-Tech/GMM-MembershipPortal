@@ -1,5 +1,5 @@
 // File: controllers/districtController.js
-// NEW FILE: Contains logic for district CRUD operations.
+// Contains logic for district CRUD operations.
 
 import { getDB } from "../../config/db.js";
 

@@ -1,5 +1,5 @@
 // File: controllers/regionController.js
-// NEW FILE: Contains the business logic for region CRUD operations.
+// Contains the business logic for region CRUD operations.
 
 import { getDB } from "../../config/db.js";
 

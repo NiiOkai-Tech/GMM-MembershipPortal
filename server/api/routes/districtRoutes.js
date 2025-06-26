@@ -1,5 +1,5 @@
 // File: routes/districtRoutes.js
-// NEW FILE: Defines API endpoints for managing districts.
+// Defines API endpoints for managing districts.
 
 import express from "express";
 import { protect, admin } from "../middleware/authMiddleware.js";

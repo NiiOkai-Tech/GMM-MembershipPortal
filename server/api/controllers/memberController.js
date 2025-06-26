@@ -1,5 +1,5 @@
 // File: controllers/memberController.js
-// NEW FILE: Contains logic for member CRUD operations with access control.
+// Contains logic for member CRUD operations with access control.
 
 import { getDB } from "../../config/db.js";
 
