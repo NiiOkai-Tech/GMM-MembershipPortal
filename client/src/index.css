@@ -1,0 +1,5 @@
+/* File: src/index.css */
+/* Main CSS file to include Tailwind's base styles. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
