@@ -1,53 +1,42 @@
 // File: src/context/AuthContext.jsx
 // Manages global authentication state (user, token, login, logout).
-import React, { createContext, useState, useEffect } from "react";
-import api from "../services/api";
-import { jwtDecode } from "jwt-decode";
+import React, { createContext, useState, useMemo } from "react";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem("token"));
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        // Check if token is expired
-        if (decoded.exp * 1000 < Date.now()) {
-          logout();
-        } else {
-          api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-          // You might want to fetch the user profile here to keep it updated
-          setUser(decoded);
-        }
-      } catch (error) {
-        console.error("Invalid token:", error);
-        logout();
-      }
+  // Simulate checking for a user session on load
+  React.useEffect(() => {
+    const loggedInUser = localStorage.getItem("user");
+    if (loggedInUser) {
+      setUser(JSON.parse(loggedInUser));
     }
     setLoading(false);
-  }, [token]);
+  }, []);
 
-  const login = (newToken) => {
-    localStorage.setItem("token", newToken);
-    api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
-    const decoded = jwtDecode(newToken);
-    setUser(decoded);
-    setToken(newToken);
+  const isAdmin = useMemo(() => user?.role === "SUPER_ADMIN", [user]);
+
+  const login = (email) => {
+    // In a real app, you'd get user data from an API.
+    // Here, we'll create a dummy user.
+    const dummyUser = {
+      email: email,
+      role: email.includes("admin") ? "SUPER_ADMIN" : "BRANCH_ADMIN", // Simple logic for testing
+    };
+    localStorage.setItem("user", JSON.stringify(dummyUser));
+    setUser(dummyUser);
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    delete api.defaults.headers.common["Authorization"];
+    localStorage.removeItem("user");
     setUser(null);
-    setToken(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, isAdmin }}>
       {!loading && children}
     </AuthContext.Provider>
   );

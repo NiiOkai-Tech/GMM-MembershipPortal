@@ -5,6 +5,13 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/layout/Layout";
+import HierarchyPage from "./pages/HierarchyPage";
+import MembersPage from "./pages/MembersPage";
+import AddMemberPage from "./pages/AddMemberPage";
+import MemberDetailsPage from "./pages/MemberDetailsPage";
+import EditMemberPage from "./pages/EditMemberPage";
+import ReportsPage from "./pages/ReportsPage";
+import SettingsPage from "./pages/SettingsPage"; // Import the new page
 
 function App() {
   return (
@@ -20,19 +27,76 @@ function App() {
           </ProtectedRoute>
         }
       />
-      {/* Add other routes here within the Layout as needed */}
-      {/* Example:
-      <Route 
-        path="/members" 
+      <Route
+        path="/hierarchy"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <HierarchyPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ReportsPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <SettingsPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/members"
         element={
           <ProtectedRoute>
             <Layout>
               <MembersPage />
             </Layout>
           </ProtectedRoute>
-        } 
+        }
       />
-      */}
+      <Route
+        path="/members/new"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AddMemberPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/members/:id"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <MemberDetailsPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/members/:id/edit"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <EditMemberPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }
