@@ -1,7 +1,6 @@
 // File: src/pages/DashboardPage.jsx
 // A placeholder for the main dashboard page.
-import React from "react";
-import { dashboardSummary } from "../data/dummyData";
+import React, { useState, useEffect } from "react";
 import Card from "../components/ui/Card";
 import {
   BarChart,
@@ -13,6 +12,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import api from "../services/api";
 
 const StatCard = ({ title, value, icon }) => (
   <div className="bg-white p-6 rounded-lg shadow flex items-center">
@@ -100,29 +100,63 @@ const MembersByRegionChart = ({ data }) => (
 );
 
 const DashboardPage = () => {
-  const stats = dashboardSummary;
+  const [summary, setSummary] = useState({
+    totalMembers: 0,
+    totalRegions: 0,
+    totalBranches: 0,
+    membersByRegion: [],
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // This is where you would fetch data from `/api/reports/summary`
+    // For now, we'll use dummy data to simulate the API call.
+    const fetchSummary = () => {
+      setIsLoading(true);
+      // const { data } = await api.get('/reports/summary');
+      const data = {
+        totalMembers: 1250,
+        totalRegions: 8,
+        totalBranches: 112,
+        membersByRegion: [
+          { name: "Greater Accra", members: 450 },
+          { name: "Ashanti", members: 320 },
+          { name: "Western", members: 180 },
+          { name: "Eastern", members: 150 },
+          { name: "Central", members: 95 },
+          { name: "Volta", members: 55 },
+        ],
+      };
+      setSummary(data);
+      setIsLoading(false);
+    };
+    fetchSummary();
+  }, []);
+
+  if (isLoading) return <p>Loading dashboard...</p>;
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard
           title="Total Members"
-          value={stats.totalMembers.toLocaleString()}
+          value={summary.totalMembers.toLocaleString()}
           icon={<UserIcon />}
         />
         <StatCard
           title="Total Regions"
-          value={stats.totalRegions}
+          value={summary.totalRegions}
           icon={<GlobeIcon />}
         />
         <StatCard
           title="Total Branches"
-          value={stats.totalBranches}
+          value={summary.totalBranches}
           icon={<BranchIcon />}
         />
       </div>
       <div>
-        <MembersByRegionChart data={stats.membersByRegion} />
+        <MembersByRegionChart data={summary.membersByRegion} />
       </div>
     </div>
   );

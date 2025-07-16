@@ -2,7 +2,7 @@
 // A comprehensive form for creating/editing a member.
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { regions, districts, branches } from "../../data/dummyData";
+import api from "../../services/api";
 import Button from "../ui/Button";
 
 const MemberForm = ({ memberToEdit }) => {
@@ -24,8 +24,40 @@ const MemberForm = ({ memberToEdit }) => {
     childrenInGMM: false,
     parentMemberId: "",
   });
+
+  const [hierarchy, setHierarchy] = useState({
+    regions: [],
+    districts: [],
+    branches: [],
+  });
+
   const [filtered, setFiltered] = useState({ districts: [], branches: [] });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const isEditMode = !!memberToEdit;
+
+  useEffect(() => {
+    const fetchHierarchy = async () => {
+      setIsLoading(true);
+      try {
+        const [regionsRes, districtsRes, branchesRes] = await Promise.all([
+          api.get("/regions"),
+          api.get("/districts"),
+          api.get("/branches"),
+        ]);
+        setHierarchy({
+          regions: regionsRes.data,
+          districts: districtsRes.data,
+          branches: branchesRes.data,
+        });
+      } catch (err) {
+        setError("Failed to load required data.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchHierarchy();
+  }, []);
 
   useEffect(() => {
     if (isEditMode) {
@@ -82,11 +114,33 @@ const MemberForm = ({ memberToEdit }) => {
       [name]: type === "checkbox" ? checked : value,
     }));
   };
-  const handleSubmit = (e) => {
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert(JSON.stringify(formData, null, 2));
-    navigate("/members");
+    setError("");
+    setIsLoading(true);
+    const apiCall = isEditMode
+      ? api.put(`/members/${memberToEdit.id}`, formData)
+      : api.post("/members", formData);
+    try {
+      await apiCall;
+      alert(`Member ${isEditMode ? "updated" : "added"} successfully!`);
+      navigate("/members");
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          `Failed to ${isEditMode ? "update" : "add"} member.`
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* ... form JSX remains the same ... */}
+    </form>
+  );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
