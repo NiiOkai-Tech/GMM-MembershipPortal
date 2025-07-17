@@ -7,6 +7,7 @@ import regionRoutes from "./api/routes/regionRoutes.js";
 import districtRoutes from "./api/routes/districtRoutes.js";
 import branchRoutes from "./api/routes/branchRoutes.js";
 import memberRoutes from "./api/routes/memberRoutes.js";
+import reportRoutes from "./api/routes/reportRoutes.js";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -38,6 +39,8 @@ app.use("/api/districts", districtRoutes);
 app.use("/api/branches", branchRoutes);
 // Use member routes
 app.use("/api/members", memberRoutes);
+
+app.use("/api/reports", reportRoutes);
 
 // Define the port the server will run on
 const PORT = process.env.PORT || 5000;
