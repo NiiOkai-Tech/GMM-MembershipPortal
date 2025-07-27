@@ -1,28 +1,22 @@
 // File: routes/branchRoutes.js
 // Defines API endpoints for managing branches.
-
-import express from "express";
-import { protect, admin } from "../middleware/authMiddleware.js";
-import {
+const express = require("express");
+const { protect, admin } = require("../middleware/authMiddleware.js");
+const {
   createBranch,
   getBranches,
   getBranchById,
   updateBranch,
   deleteBranch,
-} from "../controllers/branchController.js";
+} = require("../controllers/branchController.js");
 
 const router = express.Router();
 
-// Routes for branches
-router
-  .route("/")
-  .post(protect, admin, createBranch) // Admins can create branches
-  .get(protect, getBranches); // Authenticated users can view branches
-
+router.route("/").post(protect, admin, createBranch).get(protect, getBranches);
 router
   .route("/:id")
   .get(protect, getBranchById)
-  .put(protect, admin, updateBranch) // Admins can update
-  .delete(protect, admin, deleteBranch); // Admins can delete
+  .put(protect, admin, updateBranch)
+  .delete(protect, admin, deleteBranch);
 
-export default router;
+module.exports = router;

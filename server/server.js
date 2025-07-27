@@ -1,49 +1,54 @@
-import express from "express";
-import dotenv from "dotenv";
-import cors from "cors";
-import { connectDB } from "./config/db.js";
-import authRoutes from "./api/routes/authRoutes.js";
-import regionRoutes from "./api/routes/regionRoutes.js";
-import districtRoutes from "./api/routes/districtRoutes.js";
-import branchRoutes from "./api/routes/branchRoutes.js";
-import memberRoutes from "./api/routes/memberRoutes.js";
-import reportRoutes from "./api/routes/reportRoutes.js";
+const express = require("express");
+const dotenv = require("dotenv");
+const cors = require("cors");
+const { connectDB } = require("./config/db.js");
+const authRoutes = require("./api/routes/authRoutes.js");
+const regionRoutes = require("./api/routes/regionRoutes.js");
+const districtRoutes = require("./api/routes/districtRoutes.js");
+const branchRoutes = require("./api/routes/branchRoutes.js");
+const memberRoutes = require("./api/routes/memberRoutes.js");
+const reportRoutes = require("./api/routes/reportRoutes.js");
+const userRoutes = require("./api/routes/userRoutes.js");
 
-// Load environment variables from .env file
 dotenv.config();
-
-// Initialize Database Connection
 connectDB();
-
-// Initialize Express app
 const app = express();
 
-// Middleware
-// Enable Cross-Origin Resource Sharing
-app.use(cors());
-// Parse incoming JSON requests
+// Whitelist of allowed domains
+const allowedOrigins = [
+  "[https://ghanamuslimmission.net](https://ghanamuslimmission.net)",
+  "[https://www.ghanamuslimmission.net](https://www.ghanamuslimmission.net)",
+  "[https://membership.ghanamuslimmission.net](https://membership.ghanamuslimmission.net)",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg =
+        "The CORS policy for this site does not allow access from the specified Origin.";
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  optionsSuccessStatus: 200,
+};
+app.use(cors(corsOptions));
+
 app.use(express.json());
 
-// A simple test route to ensure the server is working
-app.get("/", (req, res) => {
-  res.send("Membership Portal API is running...");
-});
+app.get("/", (req, res) => res.send("Membership Portal API is running..."));
 
-// Use authentication routes
 app.use("/api/auth", authRoutes);
-// Use region routes
+app.use("/api/users", userRoutes);
 app.use("/api/regions", regionRoutes);
-// Use district routes
 app.use("/api/districts", districtRoutes);
-// Use branch routes
 app.use("/api/branches", branchRoutes);
-// Use member routes
 app.use("/api/members", memberRoutes);
-
 app.use("/api/reports", reportRoutes);
 
-// Define the port the server will run on
 const PORT = process.env.PORT || 5000;
-
-// Start the server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,20 +1,15 @@
 // File: controllers/childController.js
 // Contains logic for managing a member's children.
+const { getDB } = require("../../config/db.js");
 
-import { getDB } from "../../config/db.js";
-
-// Helper function to check if a user can access a specific member
 const canAccessMember = async (user, memberId) => {
   const db = getDB();
   const [members] = await db.query(
     "SELECT regionId, districtId, branchId FROM members WHERE id = ?",
     [memberId]
   );
-  if (members.length === 0) {
-    return false; // Member doesn't exist
-  }
+  if (members.length === 0) return false;
   const member = members[0];
-
   switch (user.role) {
     case "SUPER_ADMIN":
       return true;
@@ -29,12 +24,10 @@ const canAccessMember = async (user, memberId) => {
   }
 };
 
-// @desc    Add a child to a member
-// @route   POST /api/members/:memberId/children
-// @access  Private
-export const addChild = async (req, res) => {
+const addChild = async (req, res) => {
   const { memberId } = req.params;
-  const { fullName, age, schoolOrProfession, telephoneNumber } = req.body;
+  const { fullName, age, gender, status, courseOrOccupation, telephoneNumber } =
+    req.body;
 
   if (!fullName) {
     return res.status(400).json({ message: "Child full name is required." });
@@ -49,12 +42,14 @@ export const addChild = async (req, res) => {
 
     const db = getDB();
     const sql =
-      "INSERT INTO children (memberId, fullName, age, schoolOrProfession, telephoneNumber) VALUES (?, ?, ?, ?, ?)";
+      "INSERT INTO children (memberId, fullName, age, gender, status, courseOrOccupation, telephoneNumber) VALUES (?, ?, ?, ?, ?, ?, ?)";
     const params = [
       memberId,
       fullName,
       age || null,
-      schoolOrProfession,
+      gender,
+      status,
+      courseOrOccupation,
       telephoneNumber,
     ];
 
@@ -66,19 +61,13 @@ export const addChild = async (req, res) => {
   }
 };
 
-// @desc    Get all children for a specific member
-// @route   GET /api/members/:memberId/children
-// @access  Private
-export const getChildrenForMember = async (req, res) => {
+const getChildrenForMember = async (req, res) => {
   const { memberId } = req.params;
-
   try {
-    if (!(await canAccessMember(req.user, memberId))) {
+    if (!(await canAccessMember(req.user, memberId)))
       return res
         .status(403)
         .json({ message: "Not authorized to view this member's children" });
-    }
-
     const db = getDB();
     const [children] = await db.query(
       "SELECT * FROM children WHERE memberId = ?",
@@ -91,12 +80,10 @@ export const getChildrenForMember = async (req, res) => {
   }
 };
 
-// @desc    Update a child's details
-// @route   PUT /api/members/children/:childId
-// @access  Private
-export const updateChild = async (req, res) => {
+const updateChild = async (req, res) => {
   const { childId } = req.params;
-  const { fullName, age, schoolOrProfession, telephoneNumber } = req.body;
+  const { fullName, age, gender, status, courseOrOccupation, telephoneNumber } =
+    req.body;
 
   if (!fullName) {
     return res.status(400).json({ message: "Child full name is required." });
@@ -104,7 +91,6 @@ export const updateChild = async (req, res) => {
 
   try {
     const db = getDB();
-    // First, get the memberId from the child record to check for access
     const [children] = await db.query(
       "SELECT memberId FROM children WHERE id = ?",
       [childId]
@@ -120,11 +106,13 @@ export const updateChild = async (req, res) => {
     }
 
     const sql =
-      "UPDATE children SET fullName = ?, age = ?, schoolOrProfession = ?, telephoneNumber = ? WHERE id = ?";
+      "UPDATE children SET fullName = ?, age = ?, gender = ?, status = ?, courseOrOccupation = ?, telephoneNumber = ? WHERE id = ?";
     const params = [
       fullName,
       age || null,
-      schoolOrProfession,
+      gender,
+      status,
+      courseOrOccupation,
       telephoneNumber,
       childId,
     ];
@@ -137,15 +125,10 @@ export const updateChild = async (req, res) => {
   }
 };
 
-// @desc    Delete a child
-// @route   DELETE /api/members/children/:childId
-// @access  Private
-export const deleteChild = async (req, res) => {
+const deleteChild = async (req, res) => {
   const { childId } = req.params;
-
   try {
     const db = getDB();
-    // First, get the memberId from the child record to check for access
     const [children] = await db.query(
       "SELECT memberId FROM children WHERE id = ?",
       [childId]
@@ -167,3 +150,5 @@ export const deleteChild = async (req, res) => {
     res.status(500).json({ message: "Server error deleting child." });
   }
 };
+
+module.exports = { addChild, getChildrenForMember, updateChild, deleteChild };

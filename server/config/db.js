@@ -1,13 +1,11 @@
-import mysql from "mysql2/promise";
-import dotenv from "dotenv";
-
+const mysql = require("mysql2/promise");
+const dotenv = require("dotenv");
 dotenv.config();
 
 let connection;
 
-export const connectDB = async () => {
+const connectDB = async () => {
   try {
-    // Create a connection pool
     connection = await mysql.createPool({
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
@@ -17,20 +15,18 @@ export const connectDB = async () => {
       connectionLimit: 10,
       queueLimit: 0,
     });
-
     console.log("MySQL Connected...");
     return connection;
   } catch (err) {
     console.error(`Error: ${err.message}`);
-    // Exit process with failure
     process.exit(1);
   }
 };
 
-// Export a function to get the connection pool
-export const getDB = () => {
-  if (!connection) {
+const getDB = () => {
+  if (!connection)
     throw new Error("Database not initialized. Call connectDB first.");
-  }
   return connection;
 };
+
+module.exports = { connectDB, getDB };

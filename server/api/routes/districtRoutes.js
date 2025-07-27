@@ -1,28 +1,25 @@
 // File: routes/districtRoutes.js
 // Defines API endpoints for managing districts.
-
-import express from "express";
-import { protect, admin } from "../middleware/authMiddleware.js";
-import {
+const express = require("express");
+const { protect, admin } = require("../middleware/authMiddleware.js");
+const {
   createDistrict,
   getDistricts,
   getDistrictById,
   updateDistrict,
   deleteDistrict,
-} from "../controllers/districtController.js";
+} = require("../controllers/districtController.js");
 
 const router = express.Router();
 
-// Routes for districts
 router
   .route("/")
-  .post(protect, admin, createDistrict) // Admins can create districts
-  .get(protect, getDistricts); // Authenticated users can view districts
-
+  .post(protect, admin, createDistrict)
+  .get(protect, getDistricts);
 router
   .route("/:id")
   .get(protect, getDistrictById)
-  .put(protect, admin, updateDistrict) // Admins can update
-  .delete(protect, admin, deleteDistrict); // Admins can delete
+  .put(protect, admin, updateDistrict)
+  .delete(protect, admin, deleteDistrict);
 
-export default router;
+module.exports = router;
