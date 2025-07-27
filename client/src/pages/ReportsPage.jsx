@@ -1,7 +1,6 @@
 // File: src/pages/ReportsPage.jsx
 // A dedicated page for viewing various reports and insights.
-import React from "react";
-import { dashboardSummary, members } from "../data/dummyData";
+import React, { useState, useEffect } from "react";
 import Card from "../components/ui/Card";
 import {
   LineChart,
@@ -18,6 +17,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import api from "../services/api";
 
 const MembershipGrowthChart = ({ data }) => (
   <Card>
@@ -105,15 +105,57 @@ const RecentMembersTable = ({ data }) => (
 );
 
 const ReportsPage = () => {
-  const reports = dashboardSummary;
-  const recentMembers = [...members].sort((a, b) => b.joinYear - a.joinYear);
+  const [reports, setReports] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      // This would fetch from a more detailed reports endpoint
+      // For now, we simulate it with dummy data
+      const dummyReports = {
+        membershipGrowth: [
+          { month: "Jul 24", newMembers: 15 },
+          { month: "Aug 24", newMembers: 12 },
+          { month: "Sep 24", newMembers: 20 },
+          { month: "Oct 24", newMembers: 25 },
+          { month: "Nov 24", newMembers: 18 },
+          { month: "Dec 24", newMembers: 30 },
+          { month: "Jan 25", newMembers: 22 },
+          { month: "Feb 25", newMembers: 28 },
+          { month: "Mar 25", newMembers: 35 },
+          { month: "Apr 25", newMembers: 40 },
+          { month: "May 25", newMembers: 38 },
+          { month: "Jun 25", newMembers: 45 },
+        ],
+        employmentStatus: [
+          { name: "Employed", value: 980 },
+          { name: "Unemployed", value: 270 },
+        ],
+        familyParticipation: [
+          { name: "Have Children in GMM", value: 620 },
+          { name: "No Children in GMM", value: 630 },
+        ],
+        recentMembers: (await api.get("/members")).data.sort(
+          (a, b) => b.joinYear - a.joinYear
+        ),
+      };
+      setReports(dummyReports);
+      setIsLoading(false);
+    };
+    fetchReports();
+  }, []);
+
+  if (isLoading)
+    return (
+      <div className="flex justify-center items-center h-full">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary-500"></div>
+      </div>
+    );
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">Reports & Insights</h1>
-
       <MembershipGrowthChart data={reports.membershipGrowth} />
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <MembershipDemographicsChart
           data={reports.employmentStatus}
@@ -124,8 +166,7 @@ const ReportsPage = () => {
           title="Family Participation"
         />
       </div>
-
-      <RecentMembersTable data={recentMembers} />
+      <RecentMembersTable data={reports.recentMembers} />
     </div>
   );
 };

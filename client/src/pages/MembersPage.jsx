@@ -6,25 +6,27 @@ import api from "../services/api";
 import MembersTable from "../components/members/MembersTable";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
+import { useToast } from "../context/ToastContext";
 
 const MembersPage = () => {
   const [members, setMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
+  const fetchMembers = async () => {
+    try {
+      setIsLoading(true);
+      const { data } = await api.get("/members");
+      setMembers(data);
+    } catch (err) {
+      addToast("Failed to fetch members.", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        setIsLoading(true);
-        const { data } = await api.get("/members");
-        setMembers(data);
-      } catch (err) {
-        setError("Failed to fetch members. Please try again later.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchMembers();
   }, []);
 
@@ -36,8 +38,7 @@ const MembersPage = () => {
       </div>
       <Card>
         {isLoading && <p className="text-center py-8">Loading members...</p>}
-        {error && <p className="text-center py-8 text-red-500">{error}</p>}
-        {!isLoading && !error && <MembersTable members={members} />}
+        {!isLoading && <MembersTable members={members} />}
       </Card>
     </div>
   );

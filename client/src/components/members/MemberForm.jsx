@@ -4,14 +4,19 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import Button from "../ui/Button";
+import useToast from "../../hooks/useToast";
 
 const MemberForm = ({ memberToEdit }) => {
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [formData, setFormData] = useState({
     firstName: "",
     otherNames: "",
     surname: "",
     dateOfBirth: "",
+    gender: "",
+    maritalStatus: "",
+    nationalIdNumber: "",
     residentialAddress: "",
     contactNumber: "",
     regionId: "",
@@ -21,19 +26,17 @@ const MemberForm = ({ memberToEdit }) => {
     occupation: "",
     isEmployed: false,
     hasChildren: false,
+    numberOfChildren: 0,
     childrenInGMM: false,
     parentMemberId: "",
   });
-
   const [hierarchy, setHierarchy] = useState({
     regions: [],
     districts: [],
     branches: [],
   });
-
   const [filtered, setFiltered] = useState({ districts: [], branches: [] });
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
   const isEditMode = !!memberToEdit;
 
   useEffect(() => {
@@ -51,13 +54,13 @@ const MemberForm = ({ memberToEdit }) => {
           branches: branchesRes.data,
         });
       } catch (err) {
-        setError("Failed to load required data.");
+        addToast("Failed to load required data.", "error");
       } finally {
         setIsLoading(false);
       }
     };
     fetchHierarchy();
-  }, []);
+  }, [addToast]);
 
   useEffect(() => {
     if (isEditMode) {
@@ -74,7 +77,9 @@ const MemberForm = ({ memberToEdit }) => {
     if (formData.regionId) {
       setFiltered((p) => ({
         ...p,
-        districts: districts.filter((d) => d.regionId === formData.regionId),
+        districts: hierarchy.districts.filter(
+          (d) => d.regionId === formData.regionId
+        ),
       }));
     } else {
       setFiltered((p) => ({ ...p, districts: [] }));
@@ -85,15 +90,15 @@ const MemberForm = ({ memberToEdit }) => {
     ) {
       setFormData((p) => ({ ...p, districtId: "", branchId: "" }));
     }
-  }, [formData.regionId]);
+  }, [formData.regionId, hierarchy.districts, isEditMode, memberToEdit]);
   useEffect(() => {
     let branchesInScope = [];
     if (formData.districtId) {
-      branchesInScope = branches.filter(
+      branchesInScope = hierarchy.branches.filter(
         (b) => b.districtId === formData.districtId
       );
     } else if (formData.regionId) {
-      branchesInScope = branches.filter(
+      branchesInScope = hierarchy.branches.filter(
         (b) => b.regionId === formData.regionId && !b.districtId
       );
     }
@@ -106,7 +111,26 @@ const MemberForm = ({ memberToEdit }) => {
     ) {
       setFormData((p) => ({ ...p, branchId: "" }));
     }
-  }, [formData.districtId, formData.regionId]);
+  }, [
+    formData.districtId,
+    formData.regionId,
+    hierarchy.branches,
+    isEditMode,
+    memberToEdit,
+  ]);
+
+  useEffect(() => {
+    if (!formData.isEmployed) {
+      setFormData((p) => ({ ...p, occupation: "" }));
+    }
+  }, [formData.isEmployed]);
+
+  useEffect(() => {
+    if (!formData.hasChildren) {
+      setFormData((p) => ({ ...p, childrenInGMM: false }));
+    }
+  }, [formData.hasChildren]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((p) => ({
@@ -114,33 +138,29 @@ const MemberForm = ({ memberToEdit }) => {
       [name]: type === "checkbox" ? checked : value,
     }));
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
     const apiCall = isEditMode
       ? api.put(`/members/${memberToEdit.id}`, formData)
       : api.post("/members", formData);
     try {
       await apiCall;
-      alert(`Member ${isEditMode ? "updated" : "added"} successfully!`);
+      addToast(
+        `Member ${isEditMode ? "updated" : "added"} successfully!`,
+        "success"
+      );
       navigate("/members");
     } catch (err) {
-      setError(
+      addToast(
         err.response?.data?.message ||
-          `Failed to ${isEditMode ? "update" : "add"} member.`
+          `Failed to ${isEditMode ? "update" : "add"} member.`,
+        "error"
       );
     } finally {
       setIsLoading(false);
     }
   };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* ... form JSX remains the same ... */}
-    </form>
-  );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -184,6 +204,38 @@ const MemberForm = ({ memberToEdit }) => {
             value={formData.dateOfBirth}
             onChange={handleChange}
             className="input text-gray-500"
+            required
+          />
+          <select
+            name="gender"
+            value={formData.gender}
+            onChange={handleChange}
+            className="input"
+            required
+          >
+            <option value="">Select Gender</option>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+          </select>
+          <select
+            name="maritalStatus"
+            value={formData.maritalStatus}
+            onChange={handleChange}
+            className="input"
+            required
+          >
+            <option value="">Select Marital Status</option>
+            <option value="SINGLE">Single</option>
+            <option value="MARRIED">Married</option>
+            <option value="DIVORCED">Divorced</option>
+            <option value="WIDOWED">Widowed</option>
+          </select>
+          <input
+            name="nationalIdNumber"
+            value={formData.nationalIdNumber}
+            onChange={handleChange}
+            placeholder="National ID Number"
+            className="input"
           />
           <input
             name="residentialAddress"
@@ -205,7 +257,7 @@ const MemberForm = ({ memberToEdit }) => {
             required
           >
             <option value="">Select Region *</option>
-            {regions.map((r) => (
+            {hierarchy.regions.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
               </option>
@@ -260,13 +312,6 @@ const MemberForm = ({ memberToEdit }) => {
       <div className="p-4 border rounded-md">
         <h3 className="text-lg font-semibold mb-4">Other Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-          <input
-            name="occupation"
-            value={formData.occupation}
-            onChange={handleChange}
-            placeholder="Occupation"
-            className="input"
-          />
           <div className="flex items-center space-x-4">
             <span>Employed?</span>
             <label>
@@ -292,6 +337,15 @@ const MemberForm = ({ memberToEdit }) => {
               No
             </label>
           </div>
+          {formData.isEmployed && (
+            <input
+              name="occupation"
+              value={formData.occupation}
+              onChange={handleChange}
+              placeholder="Occupation"
+              className="input"
+            />
+          )}
           <div className="flex items-center space-x-4">
             <span>Has Children?</span>
             <label>
@@ -317,31 +371,33 @@ const MemberForm = ({ memberToEdit }) => {
               No
             </label>
           </div>
-          <div className="flex items-center space-x-4">
-            <span>Children in GMM?</span>
-            <label>
-              <input
-                type="radio"
-                name="childrenInGMM"
-                checked={formData.childrenInGMM}
-                onChange={() =>
-                  setFormData((p) => ({ ...p, childrenInGMM: true }))
-                }
-              />{" "}
-              Yes
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="childrenInGMM"
-                checked={!formData.childrenInGMM}
-                onChange={() =>
-                  setFormData((p) => ({ ...p, childrenInGMM: false }))
-                }
-              />{" "}
-              No
-            </label>
-          </div>
+          {formData.hasChildren && (
+            <div className="flex items-center space-x-4">
+              <span>Children in GMM?</span>
+              <label>
+                <input
+                  type="radio"
+                  name="childrenInGMM"
+                  checked={formData.childrenInGMM}
+                  onChange={() =>
+                    setFormData((p) => ({ ...p, childrenInGMM: true }))
+                  }
+                />{" "}
+                Yes
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="childrenInGMM"
+                  checked={!formData.childrenInGMM}
+                  onChange={() =>
+                    setFormData((p) => ({ ...p, childrenInGMM: false }))
+                  }
+                />{" "}
+                No
+              </label>
+            </div>
+          )}
         </div>
       </div>
       <div className="flex justify-end gap-4">
@@ -354,7 +410,9 @@ const MemberForm = ({ memberToEdit }) => {
         >
           Cancel
         </Button>
-        <Button type="submit">Save Member</Button>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "Saving..." : "Save Member"}
+        </Button>
       </div>
     </form>
   );

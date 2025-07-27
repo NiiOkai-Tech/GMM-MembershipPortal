@@ -9,14 +9,12 @@ import DataManagement from "../components/settings/DataManagement";
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const { isAdmin } = useContext(AuthContext);
-
   const tabClass = (tabName) =>
     `px-4 py-2 font-semibold border-b-4 rounded-t-lg transition-colors duration-300 focus:outline-none ${
       activeTab === tabName
         ? "border-primary-500 text-primary-600"
         : "border-transparent text-gray-500 hover:text-gray-700"
     }`;
-
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Settings</h1>
@@ -54,5 +52,4 @@ const SettingsPage = () => {
     </div>
   );
 };
-
 export default SettingsPage;

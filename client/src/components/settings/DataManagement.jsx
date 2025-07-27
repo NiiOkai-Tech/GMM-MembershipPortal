@@ -3,8 +3,10 @@
 import React from "react";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
+import { useToast } from "../../context/ToastContext";
 
 const DataManagement = () => {
+  const { addToast } = useToast();
   return (
     <div className="space-y-6">
       <Card>
@@ -14,7 +16,9 @@ const DataManagement = () => {
           backup.
         </p>
         <Button
-          onClick={() => alert("Export functionality not yet implemented.")}
+          onClick={() =>
+            addToast("Export functionality not yet implemented.", "error")
+          }
         >
           Export All Members
         </Button>
@@ -31,7 +35,9 @@ const DataManagement = () => {
             className="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100"
           />
           <Button
-            onClick={() => alert("Import functionality not yet implemented.")}
+            onClick={() =>
+              addToast("Import functionality not yet implemented.", "error")
+            }
           >
             Upload and Import
           </Button>
@@ -40,5 +46,4 @@ const DataManagement = () => {
     </div>
   );
 };
-
 export default DataManagement;

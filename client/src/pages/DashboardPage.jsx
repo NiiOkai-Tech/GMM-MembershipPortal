@@ -27,7 +27,7 @@ const StatCard = ({ title, value, icon }) => (
 );
 const UserIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"
     className="h-6 w-6"
     fill="none"
     viewBox="0 0 24 24"
@@ -43,7 +43,7 @@ const UserIcon = () => (
 );
 const GlobeIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"
     className="h-6 w-6"
     fill="none"
     viewBox="0 0 24 24"
@@ -59,7 +59,7 @@ const GlobeIcon = () => (
 );
 const BranchIcon = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
+    xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"
     className="h-6 w-6"
     fill="none"
     viewBox="0 0 24 24"
@@ -109,31 +109,26 @@ const DashboardPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // This is where you would fetch data from `/api/reports/summary`
-    // For now, we'll use dummy data to simulate the API call.
-    const fetchSummary = () => {
-      setIsLoading(true);
-      // const { data } = await api.get('/reports/summary');
-      const data = {
-        totalMembers: 1250,
-        totalRegions: 8,
-        totalBranches: 112,
-        membersByRegion: [
-          { name: "Greater Accra", members: 450 },
-          { name: "Ashanti", members: 320 },
-          { name: "Western", members: 180 },
-          { name: "Eastern", members: 150 },
-          { name: "Central", members: 95 },
-          { name: "Volta", members: 55 },
-        ],
-      };
-      setSummary(data);
-      setIsLoading(false);
+    const fetchSummary = async () => {
+      try {
+        setIsLoading(true);
+        const { data } = await api.get("/reports/summary");
+        setSummary(data);
+      } catch (error) {
+        console.error("Failed to fetch dashboard summary:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchSummary();
   }, []);
 
-  if (isLoading) return <p>Loading dashboard...</p>;
+  if (isLoading)
+    return (
+      <div className="flex justify-center items-center h-full">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary-500"></div>
+      </div>
+    );
 
   return (
     <div className="space-y-6">

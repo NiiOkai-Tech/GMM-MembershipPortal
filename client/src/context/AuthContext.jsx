@@ -8,44 +8,55 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem("token"));
+  const [token, setToken] = useState(() => localStorage.getItem("token"));
   const [loading, setLoading] = useState(true);
 
   const isAdmin = useMemo(() => user?.role === "SUPER_ADMIN", [user]);
 
-  const fetchUserProfile = async () => {
-    try {
-      const { data } = await api.get("/auth/profile");
-      const decoded = jwtDecode(token);
-      setUser({ ...decoded, ...data });
-    } catch (error) {
-      console.error("Failed to fetch user profile", error);
-      logout();
-    }
-  };
-
   useEffect(() => {
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        if (decoded.exp * 1000 < Date.now()) {
+    const validateToken = async () => {
+      if (token) {
+        try {
+          const decoded = jwtDecode(token);
+          if (decoded.exp * 1000 > Date.now()) {
+            api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+            // Fetch user profile only if it's not already set
+            if (!user) {
+              const { data } = await api.get("/auth/profile");
+              setUser({ ...decoded, ...data });
+            }
+          } else {
+            logout();
+          }
+        } catch (error) {
           logout();
-        } else {
-          api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-          fetchUserProfile();
         }
-      } catch (error) {
-        console.error("Invalid token:", error);
-        logout();
       }
-    }
-    setLoading(false);
-  }, [token]);
+      setLoading(false);
+    };
+    validateToken();
+  }, [token, user]);
 
-  const login = (newToken) => {
-    localStorage.setItem("token", newToken);
-    api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
-    setToken(newToken);
+  const login = async (email, password) => {
+    try {
+      const response = await api.post("/auth/login", { email, password });
+      const newToken = response.data.token;
+      localStorage.setItem("token", newToken);
+
+      // Set token and immediately fetch user profile
+      api.defaults.headers.common["Authorization"] = `Bearer ${newToken}`;
+      const decoded = jwtDecode(newToken);
+      const { data: profileData } = await api.get("/auth/profile");
+      setUser({ ...decoded, ...profileData });
+
+      setToken(newToken); // This will now just confirm the state
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.response?.data?.message || "Failed to log in.",
+      };
+    }
   };
 
   const logout = () => {
@@ -56,10 +67,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider
-      value={{ user, token, login, logout, loading, isAdmin }}
-    >
-      {!loading && children}
+    <AuthContext.Provider value={{ user, login, logout, loading, isAdmin }}>
+      {children}
     </AuthContext.Provider>
   );
 };

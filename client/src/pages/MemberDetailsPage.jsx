@@ -1,24 +1,49 @@
 // File: src/pages/MemberDetailsPage.jsx
 // Fetches and displays details for a single member.
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { members } from "../data/dummyData";
+import api from "../services/api";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import ChildrenManager from "../components/members/ChildrenManager";
+import useToast from "../hooks/useToast";
 
 const DetailItem = ({ label, value }) => (
   <div>
     <p className="text-sm font-medium text-gray-500">{label}</p>
-    <p className="mt-1 text-md text-gray-900">{value || "N/A"}</p>
+    <p className="mt-1 text-md text-gray-900 capitalize">{value || "N/A"}</p>
   </div>
 );
 
 const MemberDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const member = members.find((m) => m.id === id);
+  const [member, setMember] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { addToast } = useToast();
 
+  const fetchMember = async () => {
+    try {
+      setIsLoading(true);
+      const { data } = await api.get(`/members/${id}`);
+      setMember(data);
+    } catch (err) {
+      addToast("Failed to fetch member details.", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMember();
+  }, [id]);
+
+  if (isLoading)
+    return (
+      <div className="flex justify-center items-center h-full">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary-500"></div>
+      </div>
+    );
   if (!member)
     return <p className="text-center text-red-500">Member not found.</p>;
 
@@ -50,6 +75,9 @@ const MemberDetailsPage = () => {
                   : "N/A"
               }
             />
+            <DetailItem label="Gender" value={member.gender} />
+            <DetailItem label="Marital Status" value={member.maritalStatus} />
+            <DetailItem label="National ID" value={member.nationalIdNumber} />
             <DetailItem label="Join Year" value={member.joinYear} />
             <DetailItem label="Occupation" value={member.occupation} />
             <DetailItem
@@ -76,6 +104,7 @@ const MemberDetailsPage = () => {
         <ChildrenManager
           memberId={member.id}
           initialChildren={member.children}
+          onChildrenUpdate={fetchMember}
         />
       </div>
     </div>

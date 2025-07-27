@@ -3,7 +3,8 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:9000/api", // Your backend API URL
+  // baseURL: "https://api.ghanamuslimmission.net/api",
+  baseURL: "http://localhost:9000/api",
   headers: {
     "Content-Type": "application/json",
   },

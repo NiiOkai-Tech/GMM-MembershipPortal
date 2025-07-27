@@ -11,93 +11,97 @@ import AddMemberPage from "./pages/AddMemberPage";
 import MemberDetailsPage from "./pages/MemberDetailsPage";
 import EditMemberPage from "./pages/EditMemberPage";
 import ReportsPage from "./pages/ReportsPage";
-import SettingsPage from "./pages/SettingsPage"; // Import the new page
+import SettingsPage from "./pages/SettingsPage";
+import ToastContainer from "./components/ui/ToastContainer";
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <DashboardPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/hierarchy"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <HierarchyPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/reports"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <ReportsPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <SettingsPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/members"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <MembersPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/members/new"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <AddMemberPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/members/:id"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <MemberDetailsPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/members/:id/edit"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <EditMemberPage />
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
-    </Routes>
+    <>
+      <ToastContainer />
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <DashboardPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hierarchy"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <HierarchyPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ReportsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <SettingsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/members"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <MembersPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/members/new"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <AddMemberPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/members/:id"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <MemberDetailsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/members/:id/edit"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <EditMemberPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </>
   );
 }
 

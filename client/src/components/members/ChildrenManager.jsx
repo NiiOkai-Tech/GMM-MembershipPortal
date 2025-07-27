@@ -1,14 +1,21 @@
 // File: src/components/members/ChildrenManager.jsx
 // A component to manage a member's children (view, add, edit, delete).
 import React, { useState } from "react";
+import api from "../../services/api";
 import Button from "../ui/Button";
 import Card from "../ui/Card";
 import Modal from "../ui/Modal";
+import useToast from "../../hooks/useToast";
 
-const ChildrenManager = ({ memberId, initialChildren = [] }) => {
-  const [children, setChildren] = useState(initialChildren);
+const ChildrenManager = ({
+  memberId,
+  initialChildren = [],
+  onChildrenUpdate,
+}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingChild, setEditingChild] = useState(null);
+  const { addToast } = useToast();
+
   const openModalForNew = () => {
     setEditingChild(null);
     setIsModalOpen(true);
@@ -17,13 +24,39 @@ const ChildrenManager = ({ memberId, initialChildren = [] }) => {
     setEditingChild(child);
     setIsModalOpen(true);
   };
-  const handleFormSubmit = (childData) => {
-    alert(`Submitting: ${JSON.stringify(childData)}`);
-    setIsModalOpen(false);
+
+  const handleFormSubmit = async (childData) => {
+    const apiCall = editingChild
+      ? api.put(`/members/children/${editingChild.id}`, childData)
+      : api.post(`/members/${memberId}/children`, childData);
+    try {
+      await apiCall;
+      addToast(
+        `Child record ${editingChild ? "updated" : "added"} successfully!`,
+        "success"
+      );
+      setIsModalOpen(false);
+      onChildrenUpdate();
+    } catch (err) {
+      addToast(
+        err.response?.data?.message || "Failed to save child data.",
+        "error"
+      );
+    }
   };
-  const handleDelete = (childId) => {
-    if (window.confirm("Are you sure?")) {
-      alert(`Deleting child ${childId}`);
+
+  const handleDelete = async (childId) => {
+    if (window.confirm("Are you sure you want to delete this record?")) {
+      try {
+        await api.delete(`/members/children/${childId}`);
+        addToast("Child record deleted.", "success");
+        onChildrenUpdate();
+      } catch (err) {
+        addToast(
+          err.response?.data?.message || "Failed to delete child.",
+          "error"
+        );
+      }
     }
   };
 
@@ -33,24 +66,32 @@ const ChildrenManager = ({ memberId, initialChildren = [] }) => {
         <h2 className="text-xl font-bold">Children Details</h2>
         <Button onClick={openModalForNew}>Add Child</Button>
       </div>
-      {children.length > 0 ? (
+      {initialChildren.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white">
             <thead className="bg-gray-50">
               <tr>
                 <th className="th">Full Name</th>
                 <th className="th">Age</th>
-                <th className="th">School/Profession</th>
+                <th className="th">Gender</th>
+                <th className="th">Status</th>
+                <th className="th">Course/Occupation</th>
                 <th className="th">Telephone</th>
                 <th className="th">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {children.map((child) => (
+              {initialChildren.map((child) => (
                 <tr key={child.id}>
                   <td className="td">{child.fullName}</td>
                   <td className="td">{child.age}</td>
-                  <td className="td">{child.schoolOrProfession}</td>
+                  <td className="td capitalize">
+                    {child.gender?.toLowerCase()}
+                  </td>
+                  <td className="td capitalize">
+                    {child.status?.toLowerCase()}
+                  </td>
+                  <td className="td">{child.courseOrOccupation}</td>
                   <td className="td">{child.telephoneNumber}</td>
                   <td className="td">
                     <div className="flex space-x-2">
@@ -94,7 +135,9 @@ const ChildFormModal = ({ isOpen, onClose, onSubmit, child }) => {
   const [formData, setFormData] = useState({
     fullName: child?.fullName || "",
     age: child?.age || "",
-    schoolOrProfession: child?.schoolOrProfession || "",
+    gender: child?.gender || "",
+    status: child?.status || "",
+    courseOrOccupation: child?.courseOrOccupation || "",
     telephoneNumber: child?.telephoneNumber || "",
   });
   const handleChange = (e) =>
@@ -126,11 +169,31 @@ const ChildFormModal = ({ isOpen, onClose, onSubmit, child }) => {
           placeholder="Age"
           className="input"
         />
-        <input
-          name="schoolOrProfession"
-          value={formData.schoolOrProfession}
+        <select
+          name="gender"
+          value={formData.gender}
           onChange={handleChange}
-          placeholder="School/Profession"
+          className="input"
+        >
+          <option value="">Select Gender</option>
+          <option value="MALE">Male</option>
+          <option value="FEMALE">Female</option>
+        </select>
+        <select
+          name="status"
+          value={formData.status}
+          onChange={handleChange}
+          className="input"
+        >
+          <option value="">Select Status</option>
+          <option value="STUDENT">Student</option>
+          <option value="WORKER">Worker</option>
+        </select>
+        <input
+          name="courseOrOccupation"
+          value={formData.courseOrOccupation}
+          onChange={handleChange}
+          placeholder="Course/Occupation"
           className="input"
         />
         <input
