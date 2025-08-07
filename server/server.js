@@ -9,6 +9,7 @@ const branchRoutes = require("./api/routes/branchRoutes.js");
 const memberRoutes = require("./api/routes/memberRoutes.js");
 const reportRoutes = require("./api/routes/reportRoutes.js");
 const userRoutes = require("./api/routes/userRoutes.js");
+const meetingRoutes = require("./api/routes/meetingRoutes.js");
 
 dotenv.config();
 connectDB();
@@ -16,9 +17,10 @@ const app = express();
 
 // Whitelist of allowed domains
 const allowedOrigins = [
-  "[https://ghanamuslimmission.net](https://ghanamuslimmission.net)",
-  "[https://www.ghanamuslimmission.net](https://www.ghanamuslimmission.net)",
-  "[https://membership.ghanamuslimmission.net](https://membership.ghanamuslimmission.net)",
+  "https://ghanamuslimmission.net",
+  "https://www.ghanamuslimmission.net",
+  "https://membership.ghanamuslimmission.net",
+  "https://www.membership.ghanamuslimmission.net",
   "http://localhost:5173",
   "http://localhost:3000",
 ];
@@ -49,6 +51,7 @@ app.use("/api/districts", districtRoutes);
 app.use("/api/branches", branchRoutes);
 app.use("/api/members", memberRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/meetings", meetingRoutes);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 9000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

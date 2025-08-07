@@ -64,7 +64,7 @@ const generateMemberId = async (joinYear, branchId) => {
   const branchCode = branchId.startsWith("BR-")
     ? branchId.split("-").slice(1).join("-")
     : branchId;
-  const prefix = `${joinYear}-${branchCode}-`;
+  const prefix = `${joinYear}${branchCode}`;
   const query = `SELECT id FROM members WHERE id LIKE ? ORDER BY id DESC LIMIT 1`;
   const [lastMembers] = await db.query(query, [`${prefix}%`]);
   let nextSequence = 1;
@@ -73,7 +73,7 @@ const generateMemberId = async (joinYear, branchId) => {
     const lastSequence = parseInt(lastId.split("-").pop(), 10);
     nextSequence = lastSequence + 1;
   }
-  const sequenceString = nextSequence.toString().padStart(4, "0");
+  const sequenceString = nextSequence.toString().padStart(6, "0");
   return `${prefix}${sequenceString}`;
 };
 

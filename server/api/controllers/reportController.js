@@ -28,4 +28,53 @@ const getDashboardSummary = async (req, res) => {
   }
 };
 
-module.exports = { getDashboardSummary };
+const getDetailedReport = async (req, res) => {
+  try {
+    const db = getDB();
+
+    const [membershipGrowth] = await db.query(`
+            SELECT joinYear as year, COUNT(id) as count 
+            FROM members 
+            WHERE joinYear IS NOT NULL
+            GROUP BY joinYear 
+            ORDER BY year ASC
+        `);
+
+    const [employmentStatus] = await db.query(`
+            SELECT CASE WHEN isEmployed = 1 THEN 'Employed' ELSE 'Unemployed' END as name, COUNT(id) as value 
+            FROM members 
+            WHERE isEmployed IS NOT NULL
+            GROUP BY isEmployed
+        `);
+
+    const [genderDistribution] = await db.query(
+      `SELECT gender as name, COUNT(id) as value FROM members WHERE gender IS NOT NULL GROUP BY gender`
+    );
+
+    const [maritalStatusDistribution] = await db.query(
+      `SELECT maritalStatus as name, COUNT(id) as value FROM members WHERE maritalStatus IS NOT NULL GROUP BY maritalStatus`
+    );
+
+    const [childrenStatusDistribution] = await db.query(
+      `SELECT status as name, COUNT(id) as value FROM children WHERE status IS NOT NULL GROUP BY status`
+    );
+
+    const [recentMembers] = await db.query(
+      `SELECT m.firstName, m.surname, b.name as branchName, m.joinYear FROM members m LEFT JOIN branches b ON m.branchId = b.id ORDER BY m.createdAt DESC LIMIT 5`
+    );
+
+    res.json({
+      membershipGrowth,
+      employmentStatus,
+      genderDistribution,
+      maritalStatusDistribution,
+      childrenStatusDistribution,
+      recentMembers,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error fetching detailed report." });
+  }
+};
+
+module.exports = { getDashboardSummary, getDetailedReport };
