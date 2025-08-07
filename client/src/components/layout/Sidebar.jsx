@@ -2,15 +2,14 @@
 // The main navigation sidebar for the application.
 import React from "react";
 import { NavLink } from "react-router-dom";
+import gmmLogo from "../../../public/gmm-favicon.png";
 
 const Logo = () => (
-  <svg
-    className="h-8 w-auto text-white"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-  >
-    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-  </svg>
+  <img
+    src={gmmLogo}
+    alt="Ghana Muslim Mission Logo"
+    className="h-auto w-auto"
+  />
 );
 const Sidebar = () => {
   const baseLink =
@@ -21,10 +20,10 @@ const Sidebar = () => {
     `${baseLink} ${isActive ? activeLink : normalLink}`;
   return (
     <div className="w-72 bg-gray-800 text-white flex-shrink-0 flex flex-col">
-      <div className="h-20 flex items-center justify-center px-6 space-x-3 border-b border-gray-700">
+      <div className="h-20 flex items-center justify-center px-4 space-x-3 border-b border-gray-700">
         <Logo />
         <div className="flex flex-col w-full">
-          <span className="text-lg font-bold text-[#009146]">
+          <span className="text-sm font-bold text-[#009146]">
             Ghana Muslim Mission
           </span>
           <span className="text-sm font-bold">Membership Portal</span>
@@ -39,6 +38,9 @@ const Sidebar = () => {
         </NavLink>
         <NavLink to="/hierarchy" className={linkClass}>
           <span>Hierarchy</span>
+        </NavLink>
+        <NavLink to="/attendance" className={linkClass}>
+          <span>Attendance</span>
         </NavLink>
         <NavLink to="/reports" className={linkClass}>
           <span>Reports</span>

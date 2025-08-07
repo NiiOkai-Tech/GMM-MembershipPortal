@@ -204,14 +204,12 @@ const MemberForm = ({ memberToEdit }) => {
             value={formData.dateOfBirth}
             onChange={handleChange}
             className="input text-gray-500"
-            required
           />
           <select
             name="gender"
             value={formData.gender}
             onChange={handleChange}
             className="input"
-            required
           >
             <option value="">Select Gender</option>
             <option value="MALE">Male</option>
@@ -222,7 +220,6 @@ const MemberForm = ({ memberToEdit }) => {
             value={formData.maritalStatus}
             onChange={handleChange}
             className="input"
-            required
           >
             <option value="">Select Marital Status</option>
             <option value="SINGLE">Single</option>
