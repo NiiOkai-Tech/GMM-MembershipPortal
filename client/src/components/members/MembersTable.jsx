@@ -4,9 +4,11 @@ import React from "react";
 import { Link } from "react-router-dom";
 import Button from "../ui/Button";
 
-const MembersTable = ({ members }) => {
-  if (!members || members.length === 0)
+const MembersTable = ({ members, isAdmin, onDelete }) => {
+  if (!members || members.length === 0) {
     return <p className="text-center text-gray-500 py-8">No members found.</p>;
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full bg-white">
@@ -15,7 +17,7 @@ const MembersTable = ({ members }) => {
             <th className="th">Member ID</th>
             <th className="th">Name</th>
             <th className="th">Branch</th>
-            <th className="th">Contact</th>
+            <th className="th">Contact Number</th>
             <th className="th">Join Year</th>
             <th className="th">Actions</th>
           </tr>
@@ -45,6 +47,15 @@ const MembersTable = ({ members }) => {
                       Edit
                     </Button>
                   </Link>
+                  {isAdmin && (
+                    <Button
+                      variant="danger"
+                      className="text-xs !py-1 !px-2"
+                      onClick={() => onDelete(member.id)}
+                    >
+                      Delete
+                    </Button>
+                  )}
                 </div>
               </td>
             </tr>
@@ -54,4 +65,5 @@ const MembersTable = ({ members }) => {
     </div>
   );
 };
+
 export default MembersTable;

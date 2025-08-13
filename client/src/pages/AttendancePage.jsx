@@ -11,16 +11,24 @@ import AuthContext from "../context/AuthContext";
 
 const AttendancePage = () => {
   const [meetings, setMeetings] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { addToast } = useToast();
   const { user } = useContext(AuthContext);
 
+  const canCreateMeeting = user && user.role === "BRANCH_ADMIN";
+  const canFilter =
+    user && (user.role === "SUPER_ADMIN" || user.role === "REGION_ADMIN");
+
   const fetchMeetings = async () => {
     if (!user) return;
     try {
       setIsLoading(true);
-      const { data } = await api.get("/meetings");
+      const params =
+        canFilter && selectedBranch ? { branchId: selectedBranch } : {};
+      const { data } = await api.get("/meetings", { params });
       setMeetings(data);
     } catch (error) {
       addToast("Failed to fetch meetings.", "error");
@@ -29,11 +37,23 @@ const AttendancePage = () => {
     }
   };
 
+  const fetchBranches = async () => {
+    if (!canFilter) return;
+    try {
+      const { data } = await api.get("/branches");
+      setBranches(data);
+    } catch (error) {
+      addToast("Failed to fetch branches.", "error");
+    }
+  };
+
   useEffect(() => {
     fetchMeetings();
-  }, [user]);
+  }, [user, selectedBranch]);
 
-  const canCreateMeeting = user && user.role === "BRANCH_ADMIN";
+  useEffect(() => {
+    fetchBranches();
+  }, [user]);
 
   return (
     <div>
@@ -45,6 +65,25 @@ const AttendancePage = () => {
           </Button>
         )}
       </div>
+      {canFilter && (
+        <Card className="mb-6">
+          <label className="block text-sm font-medium text-gray-700">
+            Filter by Branch
+          </label>
+          <select
+            value={selectedBranch}
+            onChange={(e) => setSelectedBranch(e.target.value)}
+            className="input mt-1"
+          >
+            <option value="">All Branches</option>
+            {branches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.name}
+              </option>
+            ))}
+          </select>
+        </Card>
+      )}
       <Card>
         {isLoading ? (
           <p className="text-center text-gray-500 py-8">Loading meetings...</p>
@@ -79,7 +118,7 @@ const AttendancePage = () => {
           </ul>
         ) : (
           <p className="text-center text-gray-500 py-8">
-            No meetings have been created yet.
+            No meetings found for the selected filter.
           </p>
         )}
       </Card>
