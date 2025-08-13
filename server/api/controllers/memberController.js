@@ -69,7 +69,12 @@ const createMember = async (req, res) => {
 
   const db = getDB();
   try {
-    const newId = await generateMemberId(joinYear, branchId);
+    const newId = await generateMemberId(
+      regionId,
+      districtId,
+      branchId,
+      joinYear
+    );
     const sql = `INSERT INTO members (id, firstName, otherNames, surname, dateOfBirth, residentialAddress, contactNumber, regionId, districtId, branchId, joinYear, occupation, isEmployed, hasChildren, numberOfChildren, childrenInGMM, parentMemberId, gender, nationalIdNumber, maritalStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     const params = [
       newId,

@@ -59,21 +59,38 @@ const generateHierarchicalId = async (type, name, parentId = null) => {
   return uniqueId;
 };
 
-const generateMemberId = async (joinYear, branchId) => {
+const generateMemberId = async (regionId, districtId, branchId, joinYear) => {
   const db = getDB();
-  const branchCode = branchId.startsWith("BR-")
-    ? branchId.split("-").slice(1).join("-")
-    : branchId;
-  const prefix = `${joinYear}${branchCode}`;
+
+  const extractCode = (id) => {
+    if (!id || typeof id !== "string") return null;
+    return id.split("-").pop();
+  };
+
+  const regionCode = extractCode(regionId);
+  const districtCode = extractCode(districtId) || "GMM"; // Placeholder if no district
+  const branchCode = extractCode(branchId);
+
+  if (!regionCode || !branchCode) {
+    throw new Error(
+      "Valid Region ID and Branch ID are required to generate a Member ID."
+    );
+  }
+
+  const prefix = `${regionCode}-${districtCode}-${branchCode}-${joinYear}-`;
+
   const query = `SELECT id FROM members WHERE id LIKE ? ORDER BY id DESC LIMIT 1`;
   const [lastMembers] = await db.query(query, [`${prefix}%`]);
+
   let nextSequence = 1;
   if (lastMembers.length > 0) {
     const lastId = lastMembers[0].id;
     const lastSequence = parseInt(lastId.split("-").pop(), 10);
     nextSequence = lastSequence + 1;
   }
-  const sequenceString = nextSequence.toString().padStart(6, "0");
+
+  const sequenceString = nextSequence.toString().padStart(4, "0");
+
   return `${prefix}${sequenceString}`;
 };
 
