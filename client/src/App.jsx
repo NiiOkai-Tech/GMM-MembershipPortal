@@ -15,6 +15,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ToastContainer from "./components/ui/ToastContainer";
 import AttendancePage from "./pages/AttendancePage";
 import MeetingAttendancePage from "./pages/MeetingAttendancePage";
+import ContributionsPage from "./pages/ContributionsPage";
 
 function App() {
   return (
@@ -63,6 +64,36 @@ function App() {
           }
         />
         <Route
+          path="/attendance"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <AttendancePage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/attendance/:id"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <MeetingAttendancePage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/contributions"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ContributionsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/members"
           element={
             <ProtectedRoute>
@@ -98,26 +129,6 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <EditMemberPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/attendance"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <AttendancePage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/attendance/:id"
-          element={
-            <ProtectedRoute>
-              <Layout>
-                <MeetingAttendancePage />
               </Layout>
             </ProtectedRoute>
           }

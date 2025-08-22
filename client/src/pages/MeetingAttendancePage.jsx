@@ -34,12 +34,10 @@ const MeetingAttendancePage = () => {
     fetchMeetingDetails();
   }, [id]);
 
-  const handleToggleAttendance = (memberId) => {
+  const handleStatusChange = (memberId, status) => {
     setMembers((prevMembers) =>
       prevMembers.map((member) =>
-        member.id === memberId
-          ? { ...member, attended: !member.attended }
-          : member
+        member.id === memberId ? { ...member, status } : member
       )
     );
   };
@@ -47,10 +45,11 @@ const MeetingAttendancePage = () => {
   const handleSaveAttendance = async () => {
     setIsSaving(true);
     try {
-      const attendedMemberIds = members
-        .filter((m) => m.attended)
-        .map((m) => m.id);
-      await api.post(`/meetings/${id}/attendance`, { attendedMemberIds });
+      const attendanceData = members.map(({ id, status }) => ({
+        memberId: id,
+        status,
+      }));
+      await api.post(`/meetings/${id}/attendance`, { attendanceData });
       addToast("Attendance saved successfully!", "success");
     } catch (error) {
       addToast("Failed to save attendance.", "error");
@@ -68,7 +67,7 @@ const MeetingAttendancePage = () => {
   if (!meeting)
     return <p className="text-center text-red-500">Meeting not found.</p>;
 
-  const attendedCount = members.filter((m) => m.attended).length;
+  const presentCount = members.filter((m) => m.status === "PRESENT").length;
 
   return (
     <div>
@@ -91,7 +90,7 @@ const MeetingAttendancePage = () => {
       <Card>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">
-            Branch Members ({attendedCount} / {members.length} Present)
+            Members ({presentCount} / {members.length} Present)
           </h2>
           <Button onClick={handleSaveAttendance} disabled={isSaving}>
             {isSaving ? "Saving..." : "Save Attendance"}
@@ -102,16 +101,32 @@ const MeetingAttendancePage = () => {
             <div
               key={member.id}
               className={`p-3 rounded-md flex items-center justify-between transition-colors ${
-                member.attended ? "bg-primary-50" : "bg-gray-50"
+                member.status === "PRESENT" ? "bg-primary-50" : "bg-gray-50"
               }`}
             >
               <span className="font-medium">{`${member.firstName} ${member.surname}`}</span>
-              <input
-                type="checkbox"
-                checked={member.attended}
-                onChange={() => handleToggleAttendance(member.id)}
-                className="h-5 w-5 rounded text-primary-600 focus:ring-primary-500 border-gray-300"
-              />
+              <div className="flex space-x-4">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name={`attendance-${member.id}`}
+                    checked={member.status === "PRESENT"}
+                    onChange={() => handleStatusChange(member.id, "PRESENT")}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                  />
+                  <span>Present</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name={`attendance-${member.id}`}
+                    checked={member.status === "ABSENT"}
+                    onChange={() => handleStatusChange(member.id, "ABSENT")}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                  />
+                  <span>Absent</span>
+                </label>
+              </div>
             </div>
           ))}
         </div>

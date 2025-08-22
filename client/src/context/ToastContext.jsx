@@ -10,7 +10,7 @@ export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
   const addToast = useCallback((message, type = "success") => {
-    const id = Date.now();
+    const id = Date.now() + Math.random(); // Combine timestamp with random number for uniqueness
     setToasts((prevToasts) => [...prevToasts, { id, message, type }]);
     setTimeout(() => {
       removeToast(id);

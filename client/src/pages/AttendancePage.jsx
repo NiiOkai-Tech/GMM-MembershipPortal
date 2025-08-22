@@ -11,24 +11,16 @@ import AuthContext from "../context/AuthContext";
 
 const AttendancePage = () => {
   const [meetings, setMeetings] = useState([]);
-  const [branches, setBranches] = useState([]);
-  const [selectedBranch, setSelectedBranch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { addToast } = useToast();
   const { user } = useContext(AuthContext);
 
-  const canCreateMeeting = user && user.role === "BRANCH_ADMIN";
-  const canFilter =
-    user && (user.role === "SUPER_ADMIN" || user.role === "REGION_ADMIN");
-
   const fetchMeetings = async () => {
     if (!user) return;
     try {
       setIsLoading(true);
-      const params =
-        canFilter && selectedBranch ? { branchId: selectedBranch } : {};
-      const { data } = await api.get("/meetings", { params });
+      const { data } = await api.get("/meetings");
       setMeetings(data);
     } catch (error) {
       addToast("Failed to fetch meetings.", "error");
@@ -37,53 +29,16 @@ const AttendancePage = () => {
     }
   };
 
-  const fetchBranches = async () => {
-    if (!canFilter) return;
-    try {
-      const { data } = await api.get("/branches");
-      setBranches(data);
-    } catch (error) {
-      addToast("Failed to fetch branches.", "error");
-    }
-  };
-
   useEffect(() => {
     fetchMeetings();
-  }, [user, selectedBranch]);
-
-  useEffect(() => {
-    fetchBranches();
   }, [user]);
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Meeting Attendance</h1>
-        {canCreateMeeting && (
-          <Button onClick={() => setIsModalOpen(true)}>
-            Create New Meeting
-          </Button>
-        )}
+        <Button onClick={() => setIsModalOpen(true)}>Create New Meeting</Button>
       </div>
-      {canFilter && (
-        <Card className="mb-6">
-          <label className="block text-sm font-medium text-gray-700">
-            Filter by Branch
-          </label>
-          <select
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-            className="input mt-1"
-          >
-            <option value="">All Branches</option>
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name}
-              </option>
-            ))}
-          </select>
-        </Card>
-      )}
       <Card>
         {isLoading ? (
           <p className="text-center text-gray-500 py-8">Loading meetings...</p>
@@ -104,13 +59,14 @@ const AttendancePage = () => {
                     </p>
                     <p className="text-sm text-gray-500">
                       {new Date(meeting.meetingDate).toLocaleDateString()} -{" "}
-                      <span className="font-medium text-gray-600">
-                        {meeting.branchName}
+                      <span className="font-medium text-gray-600 capitalize">
+                        {meeting.meetingType?.toLowerCase()} Meeting:{" "}
+                        {meeting.scopeName}
                       </span>
                     </p>
                   </div>
                   <span className="text-primary-600 font-semibold">
-                    View Attendance &rarr;
+                    Take Attendance &rarr;
                   </span>
                 </Link>
               </li>
@@ -118,7 +74,7 @@ const AttendancePage = () => {
           </ul>
         ) : (
           <p className="text-center text-gray-500 py-8">
-            No meetings found for the selected filter.
+            No meetings have been created yet.
           </p>
         )}
       </Card>
@@ -133,16 +89,50 @@ const AttendancePage = () => {
 };
 
 const CreateMeetingModal = ({ onClose, onSave }) => {
-  const [title, setTitle] = useState("");
-  const [meetingDate, setMeetingDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [formData, setFormData] = useState({
+    title: "",
+    meetingDate: new Date().toISOString().split("T")[0],
+    meetingType: "BRANCH",
+    regionId: "",
+    districtId: "",
+    branchId: "",
+  });
+  const [hierarchy, setHierarchy] = useState({
+    regions: [],
+    districts: [],
+    branches: [],
+  });
   const { addToast } = useToast();
+  const { user } = useContext(AuthContext);
+
+  useEffect(() => {
+    const fetchHierarchy = async () => {
+      try {
+        const [regionsRes, districtsRes, branchesRes] = await Promise.all([
+          api.get("/regions"),
+          api.get("/districts"),
+          api.get("/branches"),
+        ]);
+        setHierarchy({
+          regions: regionsRes.data,
+          districts: districtsRes.data,
+          branches: branchesRes.data,
+        });
+      } catch (error) {
+        addToast("Failed to load hierarchy data.", "error");
+      }
+    };
+    fetchHierarchy();
+  }, [addToast]);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await api.post("/meetings", { title, meetingDate });
+      await api.post("/meetings", formData);
       addToast("Meeting created successfully!", "success");
       onSave();
       onClose();
@@ -154,13 +144,29 @@ const CreateMeetingModal = ({ onClose, onSave }) => {
     }
   };
 
+  const canSelect = (level) => {
+    if (user.role === "SUPER_ADMIN") return true;
+    if (
+      user.role === "REGION_ADMIN" &&
+      (level === "REGION" || level === "DISTRICT" || level === "BRANCH")
+    )
+      return true;
+    if (
+      user.role === "DISTRICT_ADMIN" &&
+      (level === "DISTRICT" || level === "BRANCH")
+    )
+      return true;
+    if (user.role === "BRANCH_ADMIN" && level === "BRANCH") return true;
+    return false;
+  };
+
   return (
     <Modal isOpen onClose={onClose} title="Create New Meeting">
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           name="title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          value={formData.title}
+          onChange={handleChange}
           placeholder="Meeting Title"
           required
           className="input"
@@ -168,11 +174,72 @@ const CreateMeetingModal = ({ onClose, onSave }) => {
         <input
           name="meetingDate"
           type="date"
-          value={meetingDate}
-          onChange={(e) => setMeetingDate(e.target.value)}
+          value={formData.meetingDate}
+          onChange={handleChange}
           required
           className="input"
         />
+        <select
+          name="meetingType"
+          value={formData.meetingType}
+          onChange={handleChange}
+          className="input"
+        >
+          {canSelect("BRANCH") && (
+            <option value="BRANCH">Branch Meeting</option>
+          )}
+          {canSelect("DISTRICT") && (
+            <option value="DISTRICT">District Meeting</option>
+          )}
+          {canSelect("REGION") && (
+            <option value="REGION">Region Meeting</option>
+          )}
+        </select>
+        {formData.meetingType === "REGION" && (
+          <select
+            name="regionId"
+            value={formData.regionId}
+            onChange={handleChange}
+            className="input"
+          >
+            <option value="">Select Region</option>
+            {hierarchy.regions.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+        )}
+        {formData.meetingType === "DISTRICT" && (
+          <select
+            name="districtId"
+            value={formData.districtId}
+            onChange={handleChange}
+            className="input"
+          >
+            <option value="">Select District</option>
+            {hierarchy.districts.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        )}
+        {formData.meetingType === "BRANCH" && (
+          <select
+            name="branchId"
+            value={formData.branchId}
+            onChange={handleChange}
+            className="input"
+          >
+            <option value="">Select Branch</option>
+            {hierarchy.branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        )}
         <div className="flex justify-end gap-4 pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
