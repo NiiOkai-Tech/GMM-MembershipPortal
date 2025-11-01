@@ -122,7 +122,7 @@ const ContributionsPage = () => {
           <p>Loading data...</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 border-collapse">
+            <table className="min-w-full divide-y divide-gray-200 border-collapse ">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="th sticky left-0 bg-gray-50 z-20 w-48">
@@ -136,8 +136,11 @@ const ContributionsPage = () => {
                       {month}
                     </th>
                   ))}
-                  <th className="th sticky bg-gray-50 z-10 right-32 w-32">
+                  <th className="th sticky bg-gray-50 z-10 right-56 w-32">
                     Total Paid
+                  </th>
+                  <th className="th sticky bg-gray-50 z-10 right-32 border-l w-32">
+                    Pledge For The Year
                   </th>
                   <th className="th sticky bg-gray-50 z-10 right-0 border-l w-32">
                     Outstanding
@@ -150,14 +153,16 @@ const ContributionsPage = () => {
                     (sum, amount) => sum + (Number(amount) || 0),
                     0
                   );
+                  const pledgeForTheYear = row.pledgedAmount * 12;
                   const outstanding =
-                    (Number(row.pledgedAmount) || 0) - totalPaid;
+                    (Number(pledgeForTheYear) || 0) - totalPaid;
                   return (
                     <tr key={row.id}>
                       <td className="td sticky left-0 bg-white z-20 font-medium w-48">{`${row.firstName} ${row.surname}`}</td>
                       <td className="td sticky left-32 bg-white z-20">
                         <input
                           type="number"
+                          min="0"
                           value={row.pledgedAmount || ""}
                           onChange={(e) =>
                             handlePledgeChange(row.id, e.target.value)
@@ -169,6 +174,7 @@ const ContributionsPage = () => {
                         <td key={month} className="td">
                           <input
                             type="number"
+                            min="0"
                             value={row.contributions[index + 1] || ""}
                             onChange={(e) =>
                               handleContributionChange(
@@ -181,15 +187,18 @@ const ContributionsPage = () => {
                           />
                         </td>
                       ))}
-                      <td className="td font-medium sticky bg-white z-10 right-32 w-32">
+                      <td className="td font-medium sticky bg-white z-10 right-56 w-32">
                         {totalPaid.toFixed(2)}
+                      </td>
+                      <td className="td font-medium sticky bg-white z-10 border-l right-32 w-32">
+                        {pledgeForTheYear.toFixed(2)}
                       </td>
                       <td
                         className={`td font-medium sticky bg-white z-10 right-0 border-l w-32 ${
-                          outstanding < 0 ? "text-red-500" : ""
+                          outstanding > 0 ? "text-red-500" : "text-green-500"
                         }`}
                       >
-                        {outstanding.toFixed(2)}
+                        {Math.max(outstanding, 0).toFixed(2)}
                       </td>
                     </tr>
                   );

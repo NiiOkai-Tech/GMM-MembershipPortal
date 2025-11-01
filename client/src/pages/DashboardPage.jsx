@@ -1,18 +1,8 @@
 // File: src/pages/DashboardPage.jsx
-// A placeholder for the main dashboard page.
 import React, { useState, useEffect } from "react";
 import Card from "../components/ui/Card";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
 import api from "../services/api";
+import { useNavigate } from "react-router-dom";
 
 const StatCard = ({ title, value, icon }) => (
   <div className="bg-white p-6 rounded-lg shadow flex items-center">
@@ -25,9 +15,25 @@ const StatCard = ({ title, value, icon }) => (
     </div>
   </div>
 );
+
+const CTAButton = ({ title, description, icon, onClick, color }) => (
+  <button
+    onClick={onClick}
+    className={`group bg-white border border-gray-100 rounded-xl p-6 flex flex-col items-start shadow hover:shadow-lg transition duration-200 text-left hover:bg-${color}-50`}
+  >
+    <div
+      className={`p-3 rounded-full bg-${color}-100 text-${color}-600 mb-3 group-hover:scale-110 transition`}
+    >
+      {icon}
+    </div>
+    <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+    <p className="text-sm text-gray-500 mt-1">{description}</p>
+  </button>
+);
+
 const UserIcon = () => (
   <svg
-    xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"
+    xmlns="http://www.w3.org/2000/svg"
     className="h-6 w-6"
     fill="none"
     viewBox="0 0 24 24"
@@ -41,9 +47,10 @@ const UserIcon = () => (
     />
   </svg>
 );
+
 const GlobeIcon = () => (
   <svg
-    xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"
+    xmlns="http://www.w3.org/2000/svg"
     className="h-6 w-6"
     fill="none"
     viewBox="0 0 24 24"
@@ -57,9 +64,10 @@ const GlobeIcon = () => (
     />
   </svg>
 );
+
 const BranchIcon = () => (
   <svg
-    xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"
+    xmlns="http://www.w3.org/2000/svg"
     className="h-6 w-6"
     fill="none"
     viewBox="0 0 24 24"
@@ -80,33 +88,14 @@ const BranchIcon = () => (
   </svg>
 );
 
-const MembersByRegionChart = ({ data }) => (
-  <Card>
-    <h3 className="text-lg font-semibold mb-4">Members by Region</h3>
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart
-        data={data}
-        margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="name" />
-        <YAxis />
-        <Tooltip />
-        <Legend />
-        <Bar dataKey="members" fill="#009146" />
-      </BarChart>
-    </ResponsiveContainer>
-  </Card>
-);
-
 const DashboardPage = () => {
   const [summary, setSummary] = useState({
     totalMembers: 0,
     totalRegions: 0,
     totalBranches: 0,
-    membersByRegion: [],
   });
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -133,7 +122,9 @@ const DashboardPage = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
           title="Total Members"
           value={summary.totalMembers.toLocaleString()}
@@ -150,10 +141,71 @@ const DashboardPage = () => {
           icon={<BranchIcon />}
         />
       </div>
-      <div>
-        <MembersByRegionChart data={summary.membersByRegion} />
+
+      {/* CTA Section */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <CTAButton
+          title="View Members"
+          description="Browse and manage all registered members"
+          // icon={<UserIcon />}
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21v-4.5"
+              />
+            </svg>
+          }
+          onClick={() => navigate("/members")}
+          color="primary"
+        />
+        <CTAButton
+          title="Add New Member"
+          description="Register a new member into the system"
+          icon={
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+          }
+          onClick={() => navigate("/members/new")}
+          color="green"
+        />
+        <CTAButton
+          title="Meeting Attendance"
+          description="Manage meeting attendance"
+          icon={<BranchIcon />}
+          onClick={() => navigate("/attendance")}
+          color="blue"
+        />
+        <CTAButton
+          title="Reports"
+          description="Access statistical summaries and reports"
+          icon={<GlobeIcon />}
+          onClick={() => navigate("/reports")}
+          color="amber"
+        />
       </div>
     </div>
   );
 };
+
 export default DashboardPage;

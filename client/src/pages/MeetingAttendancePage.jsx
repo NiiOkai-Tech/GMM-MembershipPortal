@@ -126,6 +126,16 @@ const MeetingAttendancePage = () => {
                   />
                   <span>Absent</span>
                 </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name={`attendance-${member.id}`}
+                    checked={member.status === "PERMISSION"}
+                    onChange={() => handleStatusChange(member.id, "PERMISSION")}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300"
+                  />
+                  <span>Permission</span>
+                </label>
               </div>
             </div>
           ))}
