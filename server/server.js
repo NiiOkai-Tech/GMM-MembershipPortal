@@ -1,22 +1,32 @@
+// ✅ Must be very first for async error capture
+require("express-async-errors");
+
+const httpContext = require("express-http-context");
+// const { v4: uuid } = require("uuid");
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
+const path = require("path");
 const { connectDB } = require("./config/db.js");
-const authRoutes = require("./api/routes/authRoutes.js");
-const regionRoutes = require("./api/routes/regionRoutes.js");
-const districtRoutes = require("./api/routes/districtRoutes.js");
-const branchRoutes = require("./api/routes/branchRoutes.js");
-const memberRoutes = require("./api/routes/memberRoutes.js");
-const reportRoutes = require("./api/routes/reportRoutes.js");
-const userRoutes = require("./api/routes/userRoutes.js");
-const meetingRoutes = require("./api/routes/meetingRoutes.js");
-const contributionRoutes = require("./api/routes/contributionRoutes.js");
+const { errorLogger, accessLogger } = require("./config/logger.js");
 
 dotenv.config();
 connectDB();
 const app = express();
 
-// Whitelist of allowed domains
+app.use(express.json());
+
+// ✅ Attach request ID for traceability
+app.use(httpContext.middleware);
+
+// app.use((req, res, next) => {
+//   const reqId = uuid();
+//   httpContext.set("reqId", reqId);
+//   req.reqId = reqId;
+//   next();
+// });
+
+// ✅ Restore CORS handling!
 const allowedOrigins = [
   "https://ghanamuslimmission.net",
   "https://www.ghanamuslimmission.net",
@@ -28,32 +38,73 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg =
-        "The CORS policy for this site does not allow access from the specified Origin.";
-      return callback(new Error(msg), false);
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
     }
-    return callback(null, true);
+    callback(new Error("Blocked by CORS"), false);
   },
-  optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
 
-app.use(express.json());
+// ✅ Static uploads
+app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
 
-app.get("/", (req, res) => res.send("Membership Portal API is running..."));
+// ✅ Access logging middleware (MUST be before routes)
+app.use((req, res, next) => {
+  const start = process.hrtime.bigint();
+  res.on("finish", () => {
+    const end = process.hrtime.bigint();
+    const durationMs = Number(end - start) / 1_000_000;
 
-app.use("/api/auth", authRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/regions", regionRoutes);
-app.use("/api/districts", districtRoutes);
-app.use("/api/branches", branchRoutes);
-app.use("/api/members", memberRoutes);
-app.use("/api/reports", reportRoutes);
-app.use("/api/meetings", meetingRoutes);
-app.use("/api/contributions", contributionRoutes);
+    accessLogger.info({
+      // reqId: req.reqId,
+      method: req.method,
+      url: req.originalUrl,
+      statusCode: res.statusCode,
+      duration: `${durationMs.toFixed(2)}ms`,
+      slow: durationMs > 500 ? "⚠️ Slow request detected" : undefined,
+      requestSize: req.socket.bytesRead,
+      responseSize: res.getHeader("Content-Length") || 0,
+    });
+  });
 
-const PORT = process.env.PORT || 9000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  next();
+});
+
+// ✅ Routes
+app.use("/api/auth", require("./api/routes/authRoutes.js"));
+app.use("/api/users", require("./api/routes/userRoutes.js"));
+app.use("/api/regions", require("./api/routes/regionRoutes.js"));
+app.use("/api/districts", require("./api/routes/districtRoutes.js"));
+app.use("/api/branches", require("./api/routes/branchRoutes.js"));
+app.use("/api/members", require("./api/routes/memberRoutes.js"));
+app.use("/api/reports", require("./api/routes/reportRoutes.js"));
+app.use("/api/meetings", require("./api/routes/meetingRoutes.js"));
+app.use("/api/contributions", require("./api/routes/contributionRoutes.js"));
+
+// ✅ Test route
+app.get("/error-test", async (req, res) => {
+  throw new Error("💥 Test error logging!");
+});
+
+// ✅ MUST be the last middleware
+process.on("unhandledRejection", (reason) => {
+  errorLogger.error({
+    event: "UNHANDLED_REJECTION",
+    reason: reason.message || reason,
+  });
+});
+
+process.on("uncaughtException", (error) => {
+  errorLogger.error({
+    event: "UNCAUGHT_EXCEPTION",
+    message: error.message,
+    stack: error.stack,
+  });
+  process.exit(1); // Restart via PM2 or systemd
+});
+
+const PORT = process.env.PORT;
+app.listen(PORT, () =>
+  console.log(`✅ Server running & logging on port ${PORT}`)
+);
