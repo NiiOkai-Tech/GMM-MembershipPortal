@@ -8,6 +8,7 @@ yarn-error.log*
 # Build artifacts for React
 build/
 dist/
+uploads/
 
 # Environment variables
 .env
