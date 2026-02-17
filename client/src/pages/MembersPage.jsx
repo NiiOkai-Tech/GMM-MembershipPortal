@@ -35,7 +35,7 @@ const MembersPage = () => {
   const handleDeleteMember = async (memberId) => {
     if (
       window.confirm(
-        "Are you sure you want to permanently delete this member? This action cannot be undone."
+        "Are you sure you want to permanently delete this member? This action cannot be undone.",
       )
     ) {
       try {
@@ -45,7 +45,7 @@ const MembersPage = () => {
       } catch (error) {
         addToast(
           error.response?.data?.message || "Failed to delete member.",
-          "error"
+          "error",
         );
       }
     }

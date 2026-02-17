@@ -1,6 +1,6 @@
 // File: src/pages/AttendancePage.jsx
 // Main page for viewing and managing meetings.
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import Card from "../components/ui/Card";
@@ -9,10 +9,15 @@ import Modal from "../components/ui/Modal";
 import useToast from "../hooks/useToast";
 import AuthContext from "../context/AuthContext";
 
+const PAGE_SIZE = 20;
+
 const AttendancePage = () => {
   const [meetings, setMeetings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [search, setSearch] = useState("");
+
   const { addToast } = useToast();
   const { user } = useContext(AuthContext);
 
@@ -33,51 +38,132 @@ const AttendancePage = () => {
     fetchMeetings();
   }, [user]);
 
+  /**
+   * 1️⃣ Search filtering (before pagination)
+   */
+  const filteredMeetings = useMemo(() => {
+    if (!search.trim()) return meetings;
+
+    const term = search.toLowerCase();
+
+    return meetings.filter((m) => {
+      return (
+        m.title?.toLowerCase().includes(term) ||
+        m.meetingType?.toLowerCase().includes(term) ||
+        m.scopeName?.toLowerCase().includes(term) ||
+        new Date(m.meetingDate)
+          .toLocaleDateString()
+          .toLowerCase()
+          .includes(term)
+      );
+    });
+  }, [meetings, search]);
+
+  /**
+   * 2️⃣ Pagination logic
+   */
+  const totalPages = Math.ceil(filteredMeetings.length / PAGE_SIZE);
+
+  const paginatedMeetings = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return filteredMeetings.slice(start, end);
+  }, [filteredMeetings, currentPage]);
+
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setCurrentPage(1); // reset page on search
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Meeting Attendance</h1>
         <Button onClick={() => setIsModalOpen(true)}>Create New Meeting</Button>
       </div>
+
       <Card>
         {isLoading ? (
           <p className="text-center text-gray-500 py-8">Loading meetings...</p>
         ) : meetings.length > 0 ? (
-          <ul className="space-y-3">
-            {meetings.map((meeting) => (
-              <li
-                key={meeting.id}
-                className="p-4 bg-gray-50 rounded-md hover:bg-primary-50 transition-colors"
-              >
-                <Link
-                  to={`/attendance/${meeting.id}`}
-                  className="flex justify-between items-center"
+          <>
+            {/* 🔍 Search Bar (same style as Members page) */}
+            <input
+              type="text"
+              placeholder="Search by title, type, scope or date..."
+              value={search}
+              onChange={handleSearchChange}
+              className="input w-full md:w-1/3 mb-4"
+            />
+
+            <ul className="space-y-3">
+              {paginatedMeetings.map((meeting) => (
+                <li
+                  key={meeting.id}
+                  className="p-4 bg-gray-50 rounded-md hover:bg-primary-50 transition-colors"
                 >
-                  <div>
-                    <p className="font-semibold text-lg text-gray-800">
-                      {meeting.title}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(meeting.meetingDate).toLocaleDateString()} -{" "}
-                      <span className="font-medium text-gray-600 capitalize">
-                        {meeting.meetingType?.toLowerCase()} Meeting:{" "}
-                        {meeting.scopeName}
-                      </span>
-                    </p>
-                  </div>
-                  <span className="text-primary-600 font-semibold">
-                    Take Attendance &rarr;
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                  <Link
+                    to={`/attendance/${meeting.id}`}
+                    className="flex justify-between items-center"
+                  >
+                    <div>
+                      <p className="font-semibold text-lg text-gray-800">
+                        {meeting.title}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {new Date(meeting.meetingDate).toLocaleDateString()} -{" "}
+                        <span className="font-medium text-gray-600 capitalize">
+                          {meeting.meetingType?.toLowerCase()} Meeting:{" "}
+                          {meeting.scopeName}
+                        </span>
+                      </p>
+                    </div>
+                    <span className="text-primary-600 font-semibold">
+                      Take Attendance &rarr;
+                    </span>
+                  </Link>
+                </li>
+              ))}
+
+              {paginatedMeetings.length === 0 && (
+                <li className="text-center text-gray-500 py-6">
+                  No matching results found.
+                </li>
+              )}
+            </ul>
+
+            {/* 📄 Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 pt-6">
+                <Button
+                  variant="secondary"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                >
+                  Prev
+                </Button>
+
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <Button
+                  variant="secondary"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
+          </>
         ) : (
           <p className="text-center text-gray-500 py-8">
             No meetings have been created yet.
           </p>
         )}
       </Card>
+
       {isModalOpen && (
         <CreateMeetingModal
           onClose={() => setIsModalOpen(false)}
@@ -88,6 +174,10 @@ const AttendancePage = () => {
   );
 };
 
+/* -------------------------------------------------------------------------- */
+/*                               Create Meeting                               */
+/* -------------------------------------------------------------------------- */
+
 const CreateMeetingModal = ({ onClose, onSave }) => {
   const [formData, setFormData] = useState({
     title: "",
@@ -97,11 +187,13 @@ const CreateMeetingModal = ({ onClose, onSave }) => {
     districtId: "",
     branchId: "",
   });
+
   const [hierarchy, setHierarchy] = useState({
     regions: [],
     districts: [],
     branches: [],
   });
+
   const { addToast } = useToast();
   const { user } = useContext(AuthContext);
 
@@ -113,6 +205,7 @@ const CreateMeetingModal = ({ onClose, onSave }) => {
           api.get("/districts"),
           api.get("/branches"),
         ]);
+
         setHierarchy({
           regions: regionsRes.data,
           districts: districtsRes.data,
@@ -122,6 +215,7 @@ const CreateMeetingModal = ({ onClose, onSave }) => {
         addToast("Failed to load hierarchy data.", "error");
       }
     };
+
     fetchHierarchy();
   }, [addToast]);
 
@@ -139,7 +233,7 @@ const CreateMeetingModal = ({ onClose, onSave }) => {
     } catch (error) {
       addToast(
         error.response?.data?.message || "Failed to create meeting.",
-        "error"
+        "error",
       );
     }
   };
@@ -171,6 +265,7 @@ const CreateMeetingModal = ({ onClose, onSave }) => {
           required
           className="input"
         />
+
         <input
           name="meetingDate"
           type="date"
@@ -179,6 +274,7 @@ const CreateMeetingModal = ({ onClose, onSave }) => {
           required
           className="input"
         />
+
         <select
           name="meetingType"
           value={formData.meetingType}
@@ -195,6 +291,7 @@ const CreateMeetingModal = ({ onClose, onSave }) => {
             <option value="REGION">Region Meeting</option>
           )}
         </select>
+
         {formData.meetingType === "REGION" && (
           <select
             name="regionId"
@@ -210,6 +307,7 @@ const CreateMeetingModal = ({ onClose, onSave }) => {
             ))}
           </select>
         )}
+
         {formData.meetingType === "DISTRICT" && (
           <select
             name="districtId"
@@ -225,6 +323,7 @@ const CreateMeetingModal = ({ onClose, onSave }) => {
             ))}
           </select>
         )}
+
         {formData.meetingType === "BRANCH" && (
           <select
             name="branchId"
@@ -240,6 +339,7 @@ const CreateMeetingModal = ({ onClose, onSave }) => {
             ))}
           </select>
         )}
+
         <div className="flex justify-end gap-4 pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel

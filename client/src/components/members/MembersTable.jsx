@@ -4,23 +4,50 @@ import { Link } from "react-router-dom";
 import Button from "../ui/Button";
 import AuthContext from "../../context/AuthContext";
 
+const PAGE_SIZE = 10;
+
 const MembersTable = ({ members, onDelete }) => {
   const { isAdmin } = useContext(AuthContext);
-  const [search, setSearch] = useState("");
 
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  /**
+   * 1️⃣ Filter members (search)
+   */
   const filteredMembers = useMemo(() => {
     if (!search.trim()) return members;
+
+    const term = search.toLowerCase();
     return members.filter((m) => {
-      const term = search.toLowerCase();
       return (
-        m.id.toLowerCase().includes(term) ||
-        m.firstName.toLowerCase().includes(term) ||
-        m.surname.toLowerCase().includes(term) ||
-        (m.contactNumber && m.contactNumber.toLowerCase().includes(term)) ||
-        (m.branchName && m.branchName.toLowerCase().includes(term))
+        m.id?.toLowerCase().includes(term) ||
+        m.firstName?.toLowerCase().includes(term) ||
+        m.surname?.toLowerCase().includes(term) ||
+        m.contactNumber?.toLowerCase().includes(term) ||
+        m.branchName?.toLowerCase().includes(term)
       );
     });
   }, [members, search]);
+
+  /**
+   * 2️⃣ Pagination calculations
+   */
+  const totalPages = Math.ceil(filteredMembers.length / PAGE_SIZE);
+
+  const paginatedMembers = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return filteredMembers.slice(start, end);
+  }, [filteredMembers, currentPage]);
+
+  /**
+   * Reset to page 1 when search changes
+   */
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setCurrentPage(1);
+  };
 
   if (!members || members.length === 0) {
     return <p className="text-center text-gray-500 py-8">No members found.</p>;
@@ -28,15 +55,16 @@ const MembersTable = ({ members, onDelete }) => {
 
   return (
     <div className="space-y-4">
-      {/* ✅ Search Bar */}
+      {/* 🔍 Search Bar */}
       <input
         type="text"
         placeholder="Search by ID, Name, Contact or Branch..."
         value={search}
-        onChange={(e) => setSearch(e.target.value)}
+        onChange={handleSearchChange}
         className="input w-full md:w-1/3"
       />
 
+      {/* 📋 Table */}
       <div className="overflow-x-auto border rounded-lg">
         <table className="min-w-full bg-white">
           <thead className="bg-gray-100 border-b">
@@ -50,8 +78,9 @@ const MembersTable = ({ members, onDelete }) => {
               <th className="th">Actions</th>
             </tr>
           </thead>
+
           <tbody className="divide-y divide-gray-200">
-            {filteredMembers.map((member, index) => (
+            {paginatedMembers.map((member, index) => (
               <tr
                 key={member.id}
                 className={
@@ -61,7 +90,9 @@ const MembersTable = ({ members, onDelete }) => {
                 }
               >
                 <td className="td font-mono">{member.id}</td>
-                <td className="td font-medium text-gray-900">{`${member.firstName} ${member.surname}`}</td>
+                <td className="td font-medium text-gray-900">
+                  {member.firstName} {member.surname}
+                </td>
                 <td className="td">{member.branchName}</td>
                 <td className="td">
                   <span
@@ -86,6 +117,7 @@ const MembersTable = ({ members, onDelete }) => {
                         View
                       </Button>
                     </Link>
+
                     <Link to={`/members/${member.id}/edit`}>
                       <Button
                         variant="secondary"
@@ -94,6 +126,7 @@ const MembersTable = ({ members, onDelete }) => {
                         Edit
                       </Button>
                     </Link>
+
                     {isAdmin && (
                       <Button
                         variant="danger"
@@ -108,7 +141,7 @@ const MembersTable = ({ members, onDelete }) => {
               </tr>
             ))}
 
-            {filteredMembers.length === 0 && (
+            {paginatedMembers.length === 0 && (
               <tr>
                 <td colSpan="7" className="text-center text-gray-500 py-6">
                   No matching results found.
@@ -118,6 +151,31 @@ const MembersTable = ({ members, onDelete }) => {
           </tbody>
         </table>
       </div>
+
+      {/* 📄 Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 pt-4">
+          <Button
+            variant="secondary"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => p - 1)}
+          >
+            Prev
+          </Button>
+
+          <span className="text-sm text-gray-600">
+            Page {currentPage} of {totalPages}
+          </span>
+
+          <Button
+            variant="secondary"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

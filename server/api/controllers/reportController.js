@@ -1,4 +1,3 @@
-// controllers/reportController.js
 const { getDB } = require("../../config/db.js");
 
 const getDetailedReport = async (req, res) => {
@@ -6,250 +5,258 @@ const getDetailedReport = async (req, res) => {
     const db = getDB();
     const { role, regionId, districtId, branchId } = req.user;
 
-    // Helper for dynamic WHERE filters
-    const getScopeFilter = (alias = "m") => {
-      if (role === "REGION_ADMIN") return [`${alias}.regionId = ?`, [regionId]];
-      if (role === "DISTRICT_ADMIN")
-        return [`${alias}.districtId = ?`, [districtId]];
-      if (role === "BRANCH_ADMIN") return [`${alias}.branchId = ?`, [branchId]];
-      return ["1=1", []]; // Super Admin → no restrictions
+    // Super Admin optional scope override
+    const {
+      year,
+      region: qRegion,
+      district: qDistrict,
+      branch: qBranch,
+    } = req.query;
+
+    // --------------------------------------------------
+    // Effective Scope Resolver (RBAC + optional override)
+    // --------------------------------------------------
+    const resolveScope = (alias = "m") => {
+      const regionCol = `${alias}.regionId`;
+      const districtCol = `${alias}.districtId`;
+      const branchCol = `${alias}.branchId`;
+
+      if (role !== "SUPER_ADMIN") {
+        if (role === "REGION_ADMIN") return [`${regionCol} = ?`, [regionId]];
+        if (role === "DISTRICT_ADMIN")
+          return [`${districtCol} = ?`, [districtId]];
+        if (role === "BRANCH_ADMIN") return [`${branchCol} = ?`, [branchId]];
+      }
+
+      if (qBranch) return [`${branchCol} = ?`, [qBranch]];
+      if (qDistrict) return [`${districtCol} = ?`, [qDistrict]];
+      if (qRegion) return [`${regionCol} = ?`, [qRegion]];
+
+      return ["1=1", []];
     };
 
-    const [filter, params] = getScopeFilter("m");
+    const [scopeFilter, scopeParams] = resolveScope("m");
 
-    // -----------------------
-    // Membership Growth
-    // -----------------------
+    /* ======================================================
+       TIME-BASED DATA
+    ====================================================== */
+
     const [membershipGrowth] = await db.query(
       `
-        SELECT m.joinYear AS year, COUNT(m.id) AS count
-        FROM members m
-        WHERE ${filter} AND m.joinYear IS NOT NULL
-        GROUP BY m.joinYear
-        ORDER BY year ASC
-      `,
-      params
+      SELECT m.joinYear AS year, COUNT(*) AS count
+      FROM members m
+      WHERE ${scopeFilter} AND m.joinYear IS NOT NULL
+      GROUP BY m.joinYear
+      ORDER BY m.joinYear
+    `,
+      scopeParams,
     );
 
-    // -----------------------
-    // Employment Status
-    // -----------------------
-    const [employmentStatus] = await db.query(
-      `
-        SELECT 
-          CASE 
-            WHEN m.employmentStatus = 'EMPLOYED' THEN 'Employed'
-            WHEN m.employmentStatus = 'RETIRED' THEN 'Retired'
-            WHEN m.employmentStatus = 'STUDENT' THEN 'Student'
-            ELSE 'Unemployed'
-          END AS name,
-          COUNT(m.id) AS value
-        FROM members m
-        WHERE ${filter}
-        GROUP BY name
-      `,
-      params
-    );
-
-    // -----------------------
-    // Gender Distribution
-    // -----------------------
-    const [genderDistribution] = await db.query(
-      `
-        SELECT m.gender AS name, COUNT(m.id) AS value
-        FROM members m
-        WHERE ${filter} AND m.gender IS NOT NULL
-        GROUP BY m.gender
-      `,
-      params
-    );
-
-    // -----------------------
-    // Marital Status Distribution
-    // -----------------------
-    const [maritalStatusDistribution] = await db.query(
-      `
-        SELECT m.maritalStatus AS name, COUNT(m.id) AS value
-        FROM members m
-        WHERE ${filter} AND m.maritalStatus IS NOT NULL
-        GROUP BY m.maritalStatus
-      `,
-      params
-    );
-
-    // -----------------------
-    // Member Status
-    // -----------------------
-    const [memberStatus] = await db.query(
-      `
-        SELECT m.status AS name, COUNT(m.id) AS value
-        FROM members m
-        WHERE ${filter}
-        GROUP BY m.status
-      `,
-      params
-    );
-
-    // -----------------------
-    // Age Distribution
-    // -----------------------
-    const [ageDistribution] = await db.query(
-      `
-        SELECT
-          CASE
-            WHEN TIMESTAMPDIFF(YEAR, m.dateOfBirth, CURDATE()) <= 18 THEN '0-18'
-            WHEN TIMESTAMPDIFF(YEAR, m.dateOfBirth, CURDATE()) BETWEEN 19 AND 35 THEN '19-35'
-            WHEN TIMESTAMPDIFF(YEAR, m.dateOfBirth, CURDATE()) BETWEEN 36 AND 50 THEN '36-50'
-            WHEN TIMESTAMPDIFF(YEAR, m.dateOfBirth, CURDATE()) BETWEEN 51 AND 65 THEN '51-65'
-            ELSE '65+'
-          END AS name,
-          COUNT(m.id) AS value
-        FROM members m
-        WHERE ${filter} AND m.dateOfBirth IS NOT NULL
-        GROUP BY name
-        ORDER BY name
-      `,
-      params
-    );
-
-    // -----------------------
-    // Recent Members
-    // -----------------------
-    const [recentMembers] = await db.query(
-      `
-        SELECT m.firstName, m.surname, b.name AS branchName, m.joinYear
-        FROM members m
-        LEFT JOIN branches b ON m.branchId = b.id
-        WHERE ${filter}
-        ORDER BY m.createdAt DESC
-        LIMIT 5
-      `,
-      params
-    );
-
-    // -----------------------
-    // Contributions + Pledges (multi-year summary, scoped by role)
-    // -----------------------
     const [contributionSummary] = await db.query(
       `
-        SELECT 
-          p.year,
-          SUM(p.amount) * 12 AS totalPledged,
-          COALESCE(SUM(c.amount), 0) AS totalPaid
-        FROM pledges p
-        JOIN members m ON p.memberId = m.id
-        LEFT JOIN contributions c
-          ON c.memberId = m.id
-          AND c.year = p.year
-        WHERE ${filter}
-        GROUP BY p.year
-        ORDER BY p.year ASC
-      `,
-      params
+      SELECT 
+        p.year,
+        SUM(p.amount) * 12 AS totalPledged,
+        COALESCE(SUM(c.amount), 0) AS totalPaid
+      FROM pledges p
+      JOIN members m ON p.memberId = m.id
+      LEFT JOIN contributions c
+        ON c.memberId = m.id AND c.year = p.year
+      WHERE ${scopeFilter}
+      GROUP BY p.year
+      ORDER BY p.year
+    `,
+      scopeParams,
     );
 
-    // -----------------------
-    // Attendance Summary
-    // -----------------------
-    const [attendanceSummary] = await db.query(
-      `
-        SELECT a.status AS name, COUNT(a.id) AS value
-        FROM attendance a
-        JOIN members m ON a.memberId = m.id
-        WHERE ${filter}
-        GROUP BY a.status
-      `,
-      params
-    );
-
-    // -----------------------
-    // SUPER ADMIN: Region / District / Branch contribution breakdowns
-    // -----------------------
     let regionContributionSummary = [];
-    let districtContributionSummary = [];
-    let branchContributionSummary = [];
 
-    if (role === "SUPER_ADMIN") {
-      // By Region
-      [regionContributionSummary] = await db.query(`
-        SELECT 
-          r.id AS regionId,
-          r.name AS regionName,
-          p.year,
-          SUM(p.amount) * 12 AS totalPledged,
-          COALESCE(SUM(c.amount), 0) AS totalPaid
-        FROM pledges p
-        JOIN members m ON p.memberId = m.id
-        JOIN regions r ON m.regionId = r.id
-        LEFT JOIN contributions c
-          ON c.memberId = m.id
-          AND c.year = p.year
-        GROUP BY r.id, r.name, p.year
-        ORDER BY r.name, p.year
-      `);
+    if (role === "SUPER_ADMIN" && !qDistrict && !qBranch) {
+      const [rows] = await db.query(
+        `
+    SELECT
+      p.year,
+      r.name AS regionName,
+      SUM(p.amount) * 12 AS totalPledged,
+      COALESCE(SUM(c.amount), 0) AS totalPaid
+    FROM pledges p
+    JOIN members m ON p.memberId = m.id
+    JOIN regions r ON m.regionId = r.id
+    LEFT JOIN contributions c
+      ON c.memberId = m.id AND c.year = p.year
+    ${qRegion ? "WHERE m.regionId = ?" : ""}
+    GROUP BY p.year, r.name
+    ORDER BY p.year
+    `,
+        qRegion ? [qRegion] : [],
+      );
 
-      // By District
-      [districtContributionSummary] = await db.query(`
-        SELECT 
-          d.id AS districtId,
-          d.name AS districtName,
-          p.year,
-          SUM(p.amount) * 12 AS totalPledged,
-          COALESCE(SUM(c.amount), 0) AS totalPaid
-        FROM pledges p
-        JOIN members m ON p.memberId = m.id
-        JOIN districts d ON m.districtId = d.id
-        LEFT JOIN contributions c
-          ON c.memberId = m.id
-          AND c.year = p.year
-        GROUP BY d.id, d.name, p.year
-        ORDER BY d.name, p.year
-      `);
-
-      // By Branch
-      [branchContributionSummary] = await db.query(`
-        SELECT 
-          b.id AS branchId,
-          b.name AS branchName,
-          p.year,
-          SUM(p.amount) * 12 AS totalPledged,
-          COALESCE(SUM(c.amount), 0) AS totalPaid
-        FROM pledges p
-        JOIN members m ON p.memberId = m.id
-        JOIN branches b ON m.branchId = b.id
-        LEFT JOIN contributions c
-          ON c.memberId = m.id
-          AND c.year = p.year
-        GROUP BY b.id, b.name, p.year
-        ORDER BY b.name, p.year
-      `);
+      regionContributionSummary = rows;
     }
 
-    // ✅ Final JSON output
+    let districtContributionSummary = [];
+
+    if (role === "SUPER_ADMIN" && qRegion && !qBranch) {
+      const [rows] = await db.query(
+        `
+    SELECT
+      p.year,
+      d.name AS districtName,
+      SUM(p.amount) * 12 AS totalPledged,
+      COALESCE(SUM(c.amount), 0) AS totalPaid
+    FROM pledges p
+    JOIN members m ON p.memberId = m.id
+    JOIN districts d ON m.districtId = d.id
+    LEFT JOIN contributions c
+      ON c.memberId = m.id AND c.year = p.year
+    WHERE m.regionId = ?
+    GROUP BY p.year, d.name
+    ORDER BY p.year
+    `,
+        [qRegion],
+      );
+
+      districtContributionSummary = rows;
+    }
+
+    let branchContributionSummary = [];
+
+    if (role === "SUPER_ADMIN" && qDistrict) {
+      const [rows] = await db.query(
+        `
+    SELECT
+      p.year,
+      b.name AS branchName,
+      SUM(p.amount) * 12 AS totalPledged,
+      COALESCE(SUM(c.amount), 0) AS totalPaid
+    FROM pledges p
+    JOIN members m ON p.memberId = m.id
+    JOIN branches b ON m.branchId = b.id
+    LEFT JOIN contributions c
+      ON c.memberId = m.id AND c.year = p.year
+    WHERE m.districtId = ?
+    GROUP BY p.year, b.name
+    ORDER BY p.year
+    `,
+        [qDistrict],
+      );
+
+      branchContributionSummary = rows;
+    }
+
+    // Attendance (YEAR-SCOPED)
+    const [attendanceScopeFilter, attendanceScopeParams] = resolveScope("me");
+
+    const attendanceParams = [...attendanceScopeParams];
+    let attendanceYearFilter = "";
+
+    if (year) {
+      attendanceYearFilter = "AND YEAR(me.meetingDate) = ?";
+      attendanceParams.push(year);
+    }
+
+    const [attendanceSummaryByYear] = await db.query(
+      `
+  SELECT 
+    YEAR(me.meetingDate) AS year,
+    a.status AS name,
+    COUNT(*) AS value
+  FROM attendance a
+  JOIN meetings me ON a.meetingId = me.id
+  JOIN members m ON a.memberId = m.id
+  WHERE ${attendanceScopeFilter} ${attendanceYearFilter}
+  GROUP BY year, a.status
+  ORDER BY year
+`,
+      attendanceParams,
+    );
+
+    /* ======================================================
+       STATE-BASED DATA (NON-TEMPORAL)
+    ====================================================== */
+
+    const [employmentStatus] = await db.query(
+      `
+      SELECT m.employmentStatus AS name, COUNT(*) AS value
+      FROM members m
+      WHERE ${scopeFilter}
+      GROUP BY m.employmentStatus
+    `,
+      scopeParams,
+    );
+
+    const [genderDistribution] = await db.query(
+      `
+      SELECT m.gender AS name, COUNT(*) AS value
+      FROM members m
+      WHERE ${scopeFilter} AND m.gender IS NOT NULL
+      GROUP BY m.gender
+    `,
+      scopeParams,
+    );
+
+    const [maritalStatusDistribution] = await db.query(
+      `
+      SELECT m.maritalStatus AS name, COUNT(*) AS value
+      FROM members m
+      WHERE ${scopeFilter} AND m.maritalStatus IS NOT NULL
+      GROUP BY m.maritalStatus
+    `,
+      scopeParams,
+    );
+
+    const [memberStatus] = await db.query(
+      `
+      SELECT m.status AS name, COUNT(*) AS value
+      FROM members m
+      WHERE ${scopeFilter}
+      GROUP BY m.status
+    `,
+      scopeParams,
+    );
+
+    const [ageDistribution] = await db.query(
+      `
+      SELECT
+        CASE
+          WHEN TIMESTAMPDIFF(YEAR, m.dateOfBirth, CURDATE()) <= 18 THEN '0-18'
+          WHEN TIMESTAMPDIFF(YEAR, m.dateOfBirth, CURDATE()) BETWEEN 19 AND 35 THEN '19-35'
+          WHEN TIMESTAMPDIFF(YEAR, m.dateOfBirth, CURDATE()) BETWEEN 36 AND 50 THEN '36-50'
+          WHEN TIMESTAMPDIFF(YEAR, m.dateOfBirth, CURDATE()) BETWEEN 51 AND 65 THEN '51-65'
+          ELSE '65+'
+        END AS name,
+        COUNT(*) AS value
+      FROM members m
+      WHERE ${scopeFilter} AND m.dateOfBirth IS NOT NULL
+      GROUP BY name
+      ORDER BY name
+    `,
+      scopeParams,
+    );
+
     return res.json({
-      membershipGrowth,
-      employmentStatus,
-      genderDistribution,
-      maritalStatusDistribution,
-      memberStatus,
-      ageDistribution,
-      recentMembers,
-      contributionSummary,
-      attendanceSummary,
-      regionContributionSummary,
-      districtContributionSummary,
-      branchContributionSummary,
+      timeBased: {
+        membershipGrowth,
+        contributionSummary,
+        attendanceSummaryByYear,
+        regionContributionSummary,
+        districtContributionSummary,
+        branchContributionSummary,
+      },
+
+      stateBased: {
+        employmentStatus,
+        genderDistribution,
+        maritalStatusDistribution,
+        memberStatus,
+        ageDistribution,
+      },
     });
-  } catch (error) {
-    console.error("❌ Error in getDetailedReport:", error);
-    res.status(500).json({
-      message: "Server error fetching detailed report.",
-      error: error.message,
-    });
+  } catch (err) {
+    console.error("❌ getDetailedReport error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
-
-module.exports = { getDetailedReport };
 
 const getDashboardSummary = async (req, res) => {
   try {
@@ -270,14 +277,14 @@ const getDashboardSummary = async (req, res) => {
     // --- Total members ---
     const [[memberCount]] = await db.query(
       `SELECT COUNT(m.id) AS count FROM members m WHERE ${filter}`,
-      params
+      params,
     );
 
     // --- Total regions (only visible to Super Admin) ---
     let regionCount = { count: 0 };
     if (role === "SUPER_ADMIN") {
       [[regionCount]] = await db.query(
-        "SELECT COUNT(id) AS count FROM regions"
+        "SELECT COUNT(id) AS count FROM regions",
       );
     } else {
       [[regionCount]] = await db.query(
@@ -285,7 +292,7 @@ const getDashboardSummary = async (req, res) => {
          FROM regions r
          JOIN members m ON m.regionId = r.id
          WHERE ${filter}`,
-        params
+        params,
       );
     }
 
@@ -297,7 +304,7 @@ const getDashboardSummary = async (req, res) => {
         JOIN members m ON m.branchId = b.id
         WHERE ${filter}
       `,
-      params
+      params,
     );
 
     // --- Members by group (dynamic depending on role) ---
@@ -337,7 +344,7 @@ const getDashboardSummary = async (req, res) => {
 
     const [membersByGroup] = await db.query(
       membersByGroupQuery,
-      membersByGroupParams
+      membersByGroupParams,
     );
 
     // --- Return unified dashboard response ---

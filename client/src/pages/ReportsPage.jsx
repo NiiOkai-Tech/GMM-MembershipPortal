@@ -1,4 +1,3 @@
-// src/pages/ReportsPage.jsx
 import React, { useState, useEffect } from "react";
 import {
   PieChart,
@@ -27,7 +26,7 @@ const COLORS = [
   "#FF4560",
 ];
 
-// ---------- Helpers ----------
+// ---------- Helpers (Restored your original logic) ----------
 
 const formatEmploymentLabel = (raw) => {
   if (!raw && raw !== 0) return "Unemployed";
@@ -36,14 +35,15 @@ const formatEmploymentLabel = (raw) => {
   if (s === "RETIRED") return "Retired";
   if (s === "STUDENT") return "Student";
   if (s === "UNEMPLOYED") return "Unemployed";
-  // fallback: capitalize
   return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
 };
 
-const normalizePieData = (arr) => {
+const normalizePieData = (arr, targetYear = null) => {
   if (!Array.isArray(arr)) return [];
   const map = new Map();
   arr.forEach((item) => {
+    if (targetYear && item.year && String(item.year) !== String(targetYear))
+      return;
     const rawName = item.name ?? item.label ?? "";
     const label = formatEmploymentLabel(rawName);
     const value = Number(item.value || 0);
@@ -59,28 +59,7 @@ const formatMoney = (num) => {
   }).format(Number(num) || 0);
 };
 
-// Aggregate pledged/paid by a key (regionName, districtName, branchName)
-const aggregateByKey = (data, keyField) => {
-  if (!Array.isArray(data)) return [];
-  const map = new Map();
-
-  data.forEach((row) => {
-    const key = row[keyField];
-    if (!key) return;
-    const existing = map.get(key) || {
-      [keyField]: key,
-      totalPledged: 0,
-      totalPaid: 0,
-    };
-    existing.totalPledged += Number(row.totalPledged || 0);
-    existing.totalPaid += Number(row.totalPaid || 0);
-    map.set(key, existing);
-  });
-
-  return Array.from(map.values());
-};
-
-// ---------- Recharts label for Pie ----------
+// ---------- Recharts Components (Restored your styling) ----------
 
 const CustomizedLabel = ({
   cx,
@@ -93,18 +72,12 @@ const CustomizedLabel = ({
   percent,
 }) => {
   const RADIAN = Math.PI / 180;
-
-  // Inside numeric value
   const innerR = innerRadius + (outerRadius - innerRadius) / 2;
   const xInner = cx + innerR * Math.cos(-midAngle * RADIAN);
   const yInner = cy + innerR * Math.sin(-midAngle * RADIAN);
-
-  // Outside label
   const outerR = outerRadius + 20;
   const xOuter = cx + outerR * Math.cos(-midAngle * RADIAN);
   const yOuter = cy + outerR * Math.sin(-midAngle * RADIAN);
-
-  const percentageText = `${(percent * 100).toFixed(0)}%`;
 
   return (
     <g>
@@ -119,7 +92,6 @@ const CustomizedLabel = ({
       >
         {value}
       </text>
-
       <text
         x={xOuter}
         y={yOuter}
@@ -128,13 +100,11 @@ const CustomizedLabel = ({
         dominantBaseline="central"
         fontSize={11}
       >
-        {payload.name} ({percentageText})
+        {payload.name} ({`${(percent * 100).toFixed(0)}%`})
       </text>
     </g>
   );
 };
-
-// ---------- Reusable blocks ----------
 
 const CustomPieChart = ({ data, title }) => (
   <div className="bg-white p-6 rounded-lg shadow-md">
@@ -164,403 +134,431 @@ const CustomPieChart = ({ data, title }) => (
         </PieChart>
       </ResponsiveContainer>
     ) : (
-      <p className="text-gray-500 text-sm">No data available.</p>
+      <p className="text-gray-500 text-sm">No data available for this year.</p>
     )}
   </div>
 );
 
-const ReportStatCard = ({ title, value, subtext, color }) => (
+const ReportStatCard = ({ title, value, color }) => (
   <div
-    className={`bg-white p-6 rounded-lg shadow-md text-center border-t-4 ${
-      color || "border-gray-300"
-    }`}
+    className={`bg-white p-6 rounded-lg shadow-md text-center border-t-4 ${color || "border-gray-300"}`}
   >
     <p className="text-sm font-medium text-gray-500">{title}</p>
     <p className="text-3xl font-bold text-gray-800 my-2">{value}</p>
-    {subtext && <p className="text-xs text-gray-400">{subtext}</p>}
   </div>
 );
 
-// Simple filter bar for Super Admin
 const SuperAdminFilters = ({
-  regions,
-  districts,
-  branches,
+  regionsData,
+  districtsData,
+  branchesData,
+  years,
   selectedRegion,
   setSelectedRegion,
   selectedDistrict,
   setSelectedDistrict,
   selectedBranch,
   setSelectedBranch,
-}) => {
-  if (regions.length <= 1 && districts.length <= 1 && branches.length <= 1) {
-    return null;
-  }
+  selectedYear,
+  setSelectedYear,
+}) => (
+  <div className="bg-white p-4 rounded-lg shadow-md mb-6 flex flex-wrap gap-4 items-center border border-gray-100">
+    <h3 className="font-bold text-gray-700 mr-2">Filters</h3>
 
-  return (
-    <div className="bg-white p-4 rounded-lg shadow-md mb-6 flex flex-wrap gap-4 items-center">
-      <h3 className="font-semibold text-gray-700">Filter Contributions</h3>
-
-      {regions.length > 1 && (
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">Region</label>
-          <select
-            className="input text-sm"
-            value={selectedRegion}
-            onChange={(e) => setSelectedRegion(e.target.value)}
-          >
-            {regions.map((r) => (
-              <option key={r} value={r}>
-                {r === "ALL" ? "All Regions" : r}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {districts.length > 1 && (
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">District</label>
-          <select
-            className="input text-sm"
-            value={selectedDistrict}
-            onChange={(e) => setSelectedDistrict(e.target.value)}
-          >
-            {districts.map((d) => (
-              <option key={d} value={d}>
-                {d === "ALL" ? "All Districts" : d}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {branches.length > 1 && (
-        <div className="flex flex-col">
-          <label className="text-xs text-gray-500 mb-1">Branch</label>
-          <select
-            className="input text-sm"
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-          >
-            {branches.map((b) => (
-              <option key={b} value={b}>
-                {b === "ALL" ? "All Branches" : b}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+    <div className="flex flex-col">
+      <label className="text-xs text-gray-400 mb-1 font-semibold uppercase">
+        Year
+      </label>
+      <select
+        className="border rounded p-1.5 text-sm bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+        value={selectedYear}
+        onChange={(e) => setSelectedYear(e.target.value)}
+      >
+        {years.map((y) => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
     </div>
-  );
-};
 
-// ---------- Main page ----------
+    <div className="flex flex-col">
+      <label className="text-xs text-gray-400 mb-1 font-semibold uppercase">
+        Region
+      </label>
+      <select
+        className="border rounded p-1.5 text-sm bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+        value={selectedRegion}
+        onChange={(e) => {
+          setSelectedRegion(e.target.value);
+          setSelectedDistrict("ALL");
+          setSelectedBranch("ALL");
+        }}
+      >
+        <option value="ALL">All Regions</option>
+        {regionsData.map((r) => (
+          <option key={r.id} value={r.id}>
+            {r.name}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    <div className="flex flex-col">
+      <label className="text-xs text-gray-400 mb-1 font-semibold uppercase">
+        District
+      </label>
+      <select
+        className="border rounded p-1.5 text-sm bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+        value={selectedDistrict}
+        onChange={(e) => {
+          setSelectedDistrict(e.target.value);
+          setSelectedBranch("ALL");
+        }}
+      >
+        <option value="ALL">All Districts</option>
+        {districtsData
+          .filter(
+            (d) => selectedRegion === "ALL" || d.regionId === selectedRegion,
+          )
+          .map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
+            </option>
+          ))}
+      </select>
+    </div>
+
+    <div className="flex flex-col">
+      <label className="text-xs text-gray-400 mb-1 font-semibold uppercase">
+        Branch
+      </label>
+      <select
+        className="border rounded p-1.5 text-sm bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+        value={selectedBranch}
+        onChange={(e) => setSelectedBranch(e.target.value)}
+      >
+        <option value="ALL">All Branches</option>
+        {branchesData
+          .filter((b) =>
+            selectedDistrict === "ALL"
+              ? selectedRegion === "ALL" || b.regionId === selectedRegion
+              : b.districtId === selectedDistrict,
+          )
+          .map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+      </select>
+    </div>
+  </div>
+);
+
+// ---------- Reports Page Component ----------
 
 const ReportsPage = () => {
   const { user } = useAuth();
-  const role = user?.role;
-  const isSuperAdmin = role === "SUPER_ADMIN";
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
 
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Filters for SUPER_ADMIN breakdown charts
+  // Lists for IDs and Names
+  const [regions, setRegions] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [branches, setBranches] = useState([]);
+
+  const [selectedYear, setSelectedYear] = useState(
+    new Date().getFullYear().toString(),
+  );
   const [selectedRegion, setSelectedRegion] = useState("ALL");
   const [selectedDistrict, setSelectedDistrict] = useState("ALL");
   const [selectedBranch, setSelectedBranch] = useState("ALL");
 
+  // Load filter options
   useEffect(() => {
-    const fetchReportData = async () => {
-      try {
-        const { data } = await api.get("/reports/detailed");
-        setReportData(data);
-      } catch (error) {
-        console.error("Failed to fetch detailed report", error);
-      } finally {
+    if (isSuperAdmin) {
+      api.get("/regions").then((res) => setRegions(res.data || []));
+      api.get("/districts").then((res) => setDistricts(res.data || []));
+      api.get("/branches").then((res) => setBranches(res.data || []));
+    }
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
+    setLoading(true);
+    api
+      .get("/reports/detailed", {
+        params: {
+          year: selectedYear,
+          region:
+            isSuperAdmin && selectedRegion !== "ALL"
+              ? selectedRegion
+              : undefined,
+          district:
+            isSuperAdmin && selectedDistrict !== "ALL"
+              ? selectedDistrict
+              : undefined,
+          branch:
+            isSuperAdmin && selectedBranch !== "ALL"
+              ? selectedBranch
+              : undefined,
+        },
+      })
+      .then((res) => {
+        setReportData(res.data);
         setLoading(false);
-      }
-    };
-    fetchReportData();
-  }, []);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, [selectedYear, selectedRegion, selectedDistrict, isSuperAdmin]);
 
-  if (loading) {
-    return <div className="text-center py-10">Loading reports...</div>;
-  }
-
-  if (!reportData) {
+  if (loading)
     return (
-      <div className="text-center py-10 text-red-500">
+      <div className="text-center py-10 font-medium">Loading reports...</div>
+    );
+  if (!reportData)
+    return (
+      <div className="text-center py-10 text-red-500 font-medium">
         Failed to load reports.
       </div>
     );
-  }
 
-  const {
-    membershipGrowth = [],
-    employmentStatus = [],
-    genderDistribution = [],
-    maritalStatusDistribution = [],
-    memberStatus = [],
-    ageDistribution = [],
-    contributionSummary = [],
-    attendanceSummary = [],
-    regionContributionSummary = [],
-    districtContributionSummary = [],
-    branchContributionSummary = [],
-  } = reportData;
-
-  const employmentPieData = normalizePieData(employmentStatus);
-
-  const latestYearData =
-    contributionSummary && contributionSummary.length > 0
-      ? contributionSummary[contributionSummary.length - 1]
-      : { year: new Date().getFullYear(), totalPledged: 0, totalPaid: 0 };
-
-  const outstanding =
-    (latestYearData.totalPledged || 0) - (latestYearData.totalPaid || 0);
-
-  // ---- Aggregated + filtered breakdowns for SUPER_ADMIN ----
-  const aggregatedRegionData = aggregateByKey(
-    regionContributionSummary,
-    "regionName"
-  );
-  const aggregatedDistrictData = aggregateByKey(
-    districtContributionSummary,
-    "districtName"
-  );
-  const aggregatedBranchData = aggregateByKey(
-    branchContributionSummary,
-    "branchName"
-  );
-
-  const regionOptions = [
-    "ALL",
-    ...Array.from(
-      new Set((aggregatedRegionData || []).map((r) => r.regionName))
-    ),
-  ];
-  const districtOptions = [
-    "ALL",
-    ...Array.from(
-      new Set((aggregatedDistrictData || []).map((d) => d.districtName))
-    ),
-  ];
-  const branchOptions = [
-    "ALL",
-    ...Array.from(
-      new Set((aggregatedBranchData || []).map((b) => b.branchName))
-    ),
-  ];
-
-  const filteredRegionData =
-    selectedRegion === "ALL"
-      ? aggregatedRegionData
-      : aggregatedRegionData.filter((r) => r.regionName === selectedRegion);
-
-  const filteredDistrictData =
-    selectedDistrict === "ALL"
-      ? aggregatedDistrictData
-      : aggregatedDistrictData.filter(
-          (d) => d.districtName === selectedDistrict
-        );
-
-  const filteredBranchData =
-    selectedBranch === "ALL"
-      ? aggregatedBranchData
-      : aggregatedBranchData.filter((b) => b.branchName === selectedBranch);
+  const { timeBased = {}, stateBased = {} } = reportData;
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">
         Detailed Reports
       </h1>
 
-      {/* Member & Attendance Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <CustomPieChart data={memberStatus} title="Member Status" />
-        <CustomPieChart data={attendanceSummary} title="Overall Attendance" />
+      <div className="flex gap-3 mb-6">
+        <button
+          onClick={() =>
+            window.open(
+              `/reports/export/pdf?year=${selectedYear}&region=${selectedRegion}&district=${selectedDistrict}`,
+            )
+          }
+          className="bg-blue-600 text-white px-4 py-2 rounded shadow"
+        >
+          Export PDF
+        </button>
+
+        <button
+          onClick={() =>
+            window.open(
+              `/reports/export/csv?year=${selectedYear}&region=${selectedRegion}&district=${selectedDistrict}`,
+            )
+          }
+          className="bg-green-600 text-white px-4 py-2 rounded shadow"
+        >
+          Download Finance CSV
+        </button>
       </div>
 
-      {/* Contributions Overview (scoped by backend to user role) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <ReportStatCard
-          title={`Total Pledged (${latestYearData.year})`}
-          value={`GH₵ ${formatMoney(latestYearData.totalPledged)}`}
-          color="border-yellow-500"
-        />
-        <ReportStatCard
-          title={`Total Paid (${latestYearData.year})`}
-          value={`GH₵ ${formatMoney(latestYearData.totalPaid)}`}
-          color="border-green-500"
-        />
-        <ReportStatCard
-          title="Outstanding"
-          value={`GH₵ ${formatMoney(outstanding)}`}
-          color="border-red-500"
-        />
-      </div>
-
-      {/* Contribution Trends */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h3 className="text-lg font-semibold text-gray-700 mb-4">
-          Pledges vs Payments (Yearly Trend)
-        </h3>
-        {contributionSummary && contributionSummary.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={contributionSummary}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="year" />
-              <YAxis tickFormatter={(v) => formatMoney(v)} width={80} />
-              <Tooltip formatter={(value) => `GH₵ ${formatMoney(value)}`} />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="totalPledged"
-                stroke="#FFBB28"
-                name="Total Pledged"
-              />
-              <Line
-                type="monotone"
-                dataKey="totalPaid"
-                stroke="#00C49F"
-                name="Total Paid"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        ) : (
-          <p className="text-gray-500">No contribution data available.</p>
-        )}
-      </div>
-
-      {/* SUPER_ADMIN-only contribution breakdowns with filters */}
       {isSuperAdmin && (
-        <>
-          <SuperAdminFilters
-            regions={regionOptions}
-            districts={districtOptions}
-            branches={branchOptions}
-            selectedRegion={selectedRegion}
-            setSelectedRegion={setSelectedRegion}
-            selectedDistrict={selectedDistrict}
-            setSelectedDistrict={setSelectedDistrict}
-            selectedBranch={selectedBranch}
-            setSelectedBranch={setSelectedBranch}
-          />
-
-          {/* Regional Breakdown */}
-          {filteredRegionData && filteredRegionData.length > 0 && (
-            <>
-              <h2 className="text-xl font-bold mt-4 mb-2">
-                Regional Contribution Breakdown
-              </h2>
-              <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={filteredRegionData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="regionName" />
-                    <YAxis tickFormatter={(v) => formatMoney(v)} width={80} />
-                    <Tooltip formatter={(v) => `GH₵ ${formatMoney(v)}`} />
-                    <Legend />
-                    <Bar dataKey="totalPledged" fill="#FFBB28" name="Pledged" />
-                    <Bar dataKey="totalPaid" fill="#00C49F" name="Paid" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </>
-          )}
-
-          {/* District Breakdown */}
-          {filteredDistrictData && filteredDistrictData.length > 0 && (
-            <>
-              <h2 className="text-xl font-bold mt-4 mb-2">
-                District Contribution Breakdown
-              </h2>
-              <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={filteredDistrictData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="districtName" />
-                    <YAxis tickFormatter={(v) => formatMoney(v)} width={80} />
-                    <Tooltip formatter={(v) => `GH₵ ${formatMoney(v)}`} />
-                    <Legend />
-                    <Bar dataKey="totalPledged" fill="#FFBB28" name="Pledged" />
-                    <Bar dataKey="totalPaid" fill="#00C49F" name="Paid" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </>
-          )}
-
-          {/* Branch Breakdown */}
-          {filteredBranchData && filteredBranchData.length > 0 && (
-            <>
-              <h2 className="text-xl font-bold mt-4 mb-2">
-                Branch Contribution Breakdown
-              </h2>
-              <div className="bg-white p-4 rounded-lg shadow-md mb-10">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={filteredBranchData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="branchName" />
-                    <YAxis tickFormatter={(v) => formatMoney(v)} width={80} />
-                    <Tooltip formatter={(v) => `GH₵ ${formatMoney(v)}`} />
-                    <Legend />
-                    <Bar dataKey="totalPledged" fill="#FFBB28" name="Pledged" />
-                    <Bar dataKey="totalPaid" fill="#00C49F" name="Paid" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </>
-          )}
-        </>
+        <SuperAdminFilters
+          regionsData={regions}
+          districtsData={districts}
+          branchesData={branches}
+          years={["2024", "2025", "2026"]}
+          selectedRegion={selectedRegion}
+          setSelectedRegion={setSelectedRegion}
+          selectedDistrict={selectedDistrict}
+          setSelectedDistrict={setSelectedDistrict}
+          selectedBranch={selectedBranch}
+          setSelectedBranch={setSelectedBranch}
+          selectedYear={selectedYear}
+          setSelectedYear={setSelectedYear}
+        />
       )}
 
-      {/* Age Distribution */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+      {/* Pledges Overview */}
+      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
+        <h3 className="text-lg font-semibold text-gray-700 mb-6">
+          Pledges Overview
+        </h3>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <ReportStatCard
+            title="Total Pledged"
+            value={formatMoney(
+              timeBased.contributionSummary?.reduce(
+                (a, b) => a + Number(b.totalPledged || 0),
+                0,
+              ),
+            )}
+            color="border-yellow-500"
+          />
+
+          <ReportStatCard
+            title="Total Paid"
+            value={formatMoney(
+              timeBased.contributionSummary?.reduce(
+                (a, b) => a + Number(b.totalPaid || 0),
+                0,
+              ),
+            )}
+            color="border-green-500"
+          />
+
+          <ReportStatCard
+            title="Outstanding"
+            value={formatMoney(
+              timeBased.contributionSummary?.reduce(
+                (a, b) =>
+                  a + Number(b.totalPledged || 0) - Number(b.totalPaid || 0),
+                0,
+              ),
+            )}
+            color="border-red-500"
+          />
+        </div>
+
+        {/* All-Time Trend */}
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={timeBased.contributionSummary}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="year" />
+            <YAxis tickFormatter={(v) => `GHS ${v}`} />
+            <Tooltip formatter={(v) => `GHS ${formatMoney(v)}`} />
+            <Legend />
+            <Line type="monotone" dataKey="totalPledged" name="Pledged" />
+            <Line type="monotone" dataKey="totalPaid" name="Paid" />
+          </LineChart>
+        </ResponsiveContainer>
+
+        {/* Hierarchical Breakdown */}
+        {!selectedRegion && timeBased.regionContributionSummary?.length > 0 && (
+          <div className="mt-8">
+            <h4 className="font-semibold mb-2 text-gray-600">
+              Contribution by Region
+            </h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={timeBased.regionContributionSummary}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="regionName" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="totalPledged" name="Pledged" />
+                <Bar dataKey="totalPaid" name="Paid" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {selectedRegion !== "ALL" &&
+          selectedDistrict === "ALL" &&
+          timeBased.districtContributionSummary?.length > 0 && (
+            <div className="mt-8">
+              <h4 className="font-semibold mb-2 text-gray-600">
+                Contribution by District
+              </h4>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={timeBased.districtContributionSummary}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="districtName" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="totalPledged" name="Pledged" />
+                  <Bar dataKey="totalPaid" name="Paid" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+        {selectedDistrict !== "ALL" &&
+          timeBased.branchContributionSummary?.length > 0 && (
+            <div className="mt-8">
+              <h4 className="font-semibold mb-2 text-gray-600">
+                Contribution by Branch
+              </h4>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={timeBased.branchContributionSummary}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="branchName" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="totalPledged" name="Pledged" />
+                  <Bar dataKey="totalPaid" name="Paid" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+      </div>
+
+      {/* Contribution Summary (Scoped Year-Based) */}
+      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
         <h3 className="text-lg font-semibold text-gray-700 mb-4">
-          Age Distribution
+          Contribution Summary ({selectedYear})
         </h3>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={ageDistribution}>
+          <BarChart
+            data={timeBased.contributionSummary?.filter(
+              (d) => String(d.year) === selectedYear,
+            )}
+          >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
-            <YAxis />
-            <Tooltip />
+            <XAxis dataKey="year" />
+            <YAxis tickFormatter={(val) => `GHS ${val}`} />
+            <Tooltip formatter={(val) => `GHS ${formatMoney(val)}`} />
             <Legend />
-            <Bar dataKey="value" fill="#82ca9d" name="Members" />
+            <Bar dataKey="totalPledged" fill="#8884d8" name="Pledged" />
+            <Bar dataKey="totalPaid" fill="#82ca9d" name="Paid" />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Gender & Employment */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <CustomPieChart data={genderDistribution} title="Gender Distribution" />
-        <CustomPieChart data={employmentPieData} title="Employment Status" />
-      </div>
-
-      {/* Membership Growth */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
         <h3 className="text-lg font-semibold text-gray-700 mb-4">
           Membership Growth Over Years
         </h3>
+
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={membershipGrowth}>
+          <LineChart data={timeBased.membershipGrowth}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="year" />
             <YAxis />
             <Tooltip />
-            <Legend />
-            <Bar dataKey="count" fill="#8884d8" name="New Members" />
-          </BarChart>
+            <Line type="monotone" dataKey="count" name="Members" />
+          </LineChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Marital Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      {/* Charts Grid - Restored your layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <CustomPieChart
-          data={maritalStatusDistribution}
+          title="Member Status"
+          data={normalizePieData(stateBased.memberStatus)}
+        />
+        <CustomPieChart
+          title="Attendance Overview"
+          data={normalizePieData(
+            timeBased.attendanceSummaryByYear,
+            selectedYear,
+          )}
+        />
+        <CustomPieChart
+          title="Employment Status"
+          data={normalizePieData(stateBased.employmentStatus)}
+        />
+        <CustomPieChart
+          title="Gender Distribution"
+          data={normalizePieData(stateBased.genderDistribution)}
+        />
+        <CustomPieChart
           title="Marital Status"
+          data={normalizePieData(stateBased.maritalStatusDistribution)}
+        />
+        <CustomPieChart
+          title="Age Groups"
+          data={normalizePieData(stateBased.ageDistribution)}
         />
       </div>
     </div>
