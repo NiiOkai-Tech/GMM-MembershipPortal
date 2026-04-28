@@ -285,6 +285,50 @@ const ReportsPage = () => {
     }
   }, [isSuperAdmin]);
 
+  const handleExportPDF = async () => {
+    try {
+      const res = await api.get("/reports/export/pdf", {
+        params: {
+          year: selectedYear,
+          region: selectedRegion !== "ALL" ? selectedRegion : undefined,
+          district: selectedDistrict !== "ALL" ? selectedDistrict : undefined,
+        },
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `report_${selectedYear}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+    } catch (err) {
+      console.error("PDF export failed", err);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const res = await api.get("/reports/export/csv", {
+        params: {
+          year: selectedYear,
+          region: selectedRegion !== "ALL" ? selectedRegion : undefined,
+          district: selectedDistrict !== "ALL" ? selectedDistrict : undefined,
+        },
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `finance_${selectedYear}.csv`);
+      document.body.appendChild(link);
+      link.click();
+    } catch (err) {
+      console.error("CSV export failed", err);
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
     api
@@ -336,22 +380,14 @@ const ReportsPage = () => {
 
       <div className="flex gap-3 mb-6">
         <button
-          onClick={() =>
-            window.open(
-              `/reports/export/pdf?year=${selectedYear}&region=${selectedRegion}&district=${selectedDistrict}`,
-            )
-          }
+          onClick={handleExportPDF}
           className="bg-blue-600 text-white px-4 py-2 rounded shadow"
         >
           Export PDF
         </button>
 
         <button
-          onClick={() =>
-            window.open(
-              `/reports/export/csv?year=${selectedYear}&region=${selectedRegion}&district=${selectedDistrict}`,
-            )
-          }
+          onClick={handleExportCSV}
           className="bg-green-600 text-white px-4 py-2 rounded shadow"
         >
           Download Finance CSV
