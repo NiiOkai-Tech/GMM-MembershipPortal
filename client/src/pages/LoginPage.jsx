@@ -1,7 +1,5 @@
-// File: src/pages/LoginPage.jsx
-// A placeholder for the login page component.
 import React, { useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import AuthContext from "../context/AuthContext";
 import Button from "../components/ui/Button";
 import useToast from "../hooks/useToast";
@@ -61,9 +59,17 @@ const LoginPage = () => {
             />
           </div>
           <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2">
-              Password
-            </label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-gray-700 text-sm font-bold">
+                Password
+              </label>
+              <Link
+                to="/forgot-password"
+                className="text-sm text-[#1f8127] hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               className="input"
@@ -80,4 +86,5 @@ const LoginPage = () => {
     </div>
   );
 };
+
 export default LoginPage;

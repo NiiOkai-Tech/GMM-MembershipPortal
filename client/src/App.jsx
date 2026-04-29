@@ -1,7 +1,8 @@
 // File: src/App.jsx
-// The root component that sets up the application's routing.
 import { Routes, Route } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/layout/Layout";
@@ -22,7 +23,12 @@ function App() {
     <>
       <ToastContainer />
       <Routes>
+        {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+
+        {/* Protected routes */}
         <Route
           path="/"
           element={

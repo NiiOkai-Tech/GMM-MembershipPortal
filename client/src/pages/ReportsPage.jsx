@@ -468,24 +468,25 @@ const ReportsPage = () => {
         </ResponsiveContainer>
 
         {/* Hierarchical Breakdown */}
-        {!selectedRegion && timeBased.regionContributionSummary?.length > 0 && (
-          <div className="mt-8">
-            <h4 className="font-semibold mb-2 text-gray-600">
-              Contribution by Region
-            </h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={timeBased.regionContributionSummary}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="regionName" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="totalPledged" name="Pledged" />
-                <Bar dataKey="totalPaid" name="Paid" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        {selectedRegion === "ALL" &&
+          timeBased.regionContributionSummary?.length > 0 && (
+            <div className="mt-8">
+              <h4 className="font-semibold mb-2 text-gray-600">
+                Contribution by Region
+              </h4>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={timeBased.regionContributionSummary}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="regionName" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="totalPledged" name="Pledged" />
+                  <Bar dataKey="totalPaid" name="Paid" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
         {selectedRegion !== "ALL" &&
           selectedDistrict === "ALL" &&
